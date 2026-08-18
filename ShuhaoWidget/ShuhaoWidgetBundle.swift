@@ -12,6 +12,8 @@ import SwiftUI
 struct ShuhaoWidgetBundle: WidgetBundle {
     var body: some Widget {
         ShuhaoWidget()
-        ShuhaoWidgetControl()
+        if #available(iOS 18.0, *) {
+            ShuhaoWidgetControl()
+        }
     }
 }

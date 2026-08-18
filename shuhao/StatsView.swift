@@ -191,16 +191,27 @@ struct StatsView: View {
             VStack(alignment: .leading, spacing: DS.Spacing.s) {
                 sectionTitle("音源分布", systemImage: "chart.pie.fill")
                 HStack(spacing: DS.Spacing.xl) {
-                    // Donut chart
-                    Chart(sourceBreakdown, id: \.source) { entry in
-                        SectorMark(
-                            angle: .value("count", entry.count),
-                            innerRadius: .ratio(0.6),
-                            angularInset: 2
-                        )
-                        .foregroundStyle(entry.source.tint)
+                    // Donut chart (iOS 17+) / 条形图 (iOS 16 等价替代,功能正常)
+                    if #available(iOS 17.0, *) {
+                        Chart(sourceBreakdown, id: \.source) { entry in
+                            SectorMark(
+                                angle: .value("count", entry.count),
+                                innerRadius: .ratio(0.6),
+                                angularInset: 2
+                            )
+                            .foregroundStyle(entry.source.tint)
+                        }
+                        .frame(width: 120, height: 120)
+                    } else {
+                        Chart(sourceBreakdown, id: \.source) { entry in
+                            BarMark(
+                                x: .value("source", entry.source.displayName),
+                                y: .value("count", entry.count)
+                            )
+                            .foregroundStyle(entry.source.tint)
+                        }
+                        .frame(width: 120, height: 120)
                     }
-                    .frame(width: 120, height: 120)
 
                     // Legend
                     VStack(alignment: .leading, spacing: 6) {
