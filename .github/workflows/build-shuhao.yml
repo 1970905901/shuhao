@@ -35,7 +35,16 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            build | tail -20
+            build > build.log 2>&1 || BUILD_RC=$?
+          echo "=== xcodebuild exit: ${BUILD_RC:-0} ==="
+          echo "=== error: lines ==="
+          grep -nE "error:" build.log | head -120 || true
+          echo "=== warning-as-error / availability notes ==="
+          grep -nE "is only available in|requires .* to be available|marked unavailable" build.log | head -40 || true
+          if [ "${BUILD_RC:-0}" -ne 0 ]; then
+            echo "=== BUILD FAILED (rc=$BUILD_RC) ==="
+            exit "$BUILD_RC"
+          fi
           APP=$(find "$DERIVED/Build/Products/Release-iphoneos" -name "shuhao.app" -maxdepth 1 | head -1)
           echo "APP=$APP"
           [ -d "$APP" ] || { echo "iOS .app not found"; exit 1; }
