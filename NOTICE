@@ -1,0 +1,26 @@
+随便听 · shuhao
+Copyright 2026 SincereXing
+
+This product includes software developed by third parties, listed below.
+
+--------------------------------------------------------------------------------
+libFLAC (Free Lossless Audio Codec library)
+--------------------------------------------------------------------------------
+Location in this repository: shuhao/Frameworks/libflac/
+Copyright (C) 2000-2009  Josh Coalson
+Copyright (C) 2011-2025  Xiph.Org Foundation
+Homepage: https://xiph.org/flac/
+License: BSD 3-Clause — full text in shuhao/Frameworks/libflac/COPYING.Xiph
+
+Only the BSD-licensed decoder library (libFLAC) is bundled. The GPL-licensed
+FLAC command-line tools are NOT included.
+
+--------------------------------------------------------------------------------
+lx-music (洛雪音乐) — user script protocol
+--------------------------------------------------------------------------------
+Location in this repository: shuhao/Resources/user-api-preload.js
+Homepage: https://github.com/lyswhut/lx-music-mobile
+License: Apache License 2.0
+
+This project reimplements the lx-music v4 custom-source script contract so that
+existing community scripts remain compatible. No music source script is bundled.

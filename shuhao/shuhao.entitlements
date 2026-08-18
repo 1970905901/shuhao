@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.siri</key>
+	<true/>
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array/>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+		<string>CloudDocuments</string>
+	</array>
+	<!-- iCloud Key-Value storage — without this, NSUbiquitousKeyValueStore writes
+	     succeed locally but never propagate to other devices / fresh installs.
+	     The $(...) macros are substituted by Xcode at codesign time. -->
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.heartbeat.shuhao</string>
+	</array>
+	<!-- Mac Catalyst:写到用户的 ~/Music/Shuhao 目录 —— iOS 不看这个 key,Mac 上启用
+	     App Sandbox 后才有意义。dev build 不强制 sandbox 时也无害。 -->
+	<key>com.apple.security.assets.music.read-write</key>
+	<true/>
+</dict>
+</plist>

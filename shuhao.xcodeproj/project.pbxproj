@@ -1,0 +1,823 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9F21537F2FCC5A220063D17B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F21537E2FCC5A210063D17B /* WidgetKit.framework */; };
+		9F2153812FCC5A220063D17B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F2153802FCC5A220063D17B /* SwiftUI.framework */; };
+		9F2153922FCC5A240063D17B /* ShuhaoWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9F21537C2FCC5A210063D17B /* ShuhaoWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9F2153902FCC5A240063D17B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9F9F908D2FAB834600FC275C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9F21537B2FCC5A210063D17B;
+			remoteInfo = ShuhaoWidgetExtension;
+		};
+		9F9F90AA2FAB834800FC275C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9F9F908D2FAB834600FC275C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9F9F90942FAB834600FC275C;
+			remoteInfo = shuhao;
+		};
+		9F9F90B42FAB834800FC275C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9F9F908D2FAB834600FC275C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9F9F90942FAB834600FC275C;
+			remoteInfo = shuhao;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9F2153972FCC5A240063D17B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9F2153922FCC5A240063D17B /* ShuhaoWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		9F21537C2FCC5A210063D17B /* ShuhaoWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuhaoWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F21537E2FCC5A210063D17B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		9F2153802FCC5A220063D17B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		9F21539E2FCC60D60063D17B /* ShuhaoWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuhaoWidgetExtension.entitlements; sourceTree = "<group>"; };
+		9F9F90952FAB834600FC275C /* shuhao.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = shuhao.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F9F90A92FAB834800FC275C /* shuhaoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = shuhaoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F9F90B32FAB834800FC275C /* shuhaoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = shuhaoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9F2153962FCC5A240063D17B /* Exceptions for "ShuhaoWidget" folder in "ShuhaoWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9F21537B2FCC5A210063D17B /* ShuhaoWidgetExtension */;
+		};
+		9F21539D2FCC5BF10063D17B /* Exceptions for "ShuhaoWidget" folder in "shuhao" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SharedAppGroup.swift,
+				SharedPlaybackState.swift,
+			);
+			target = 9F9F90942FAB834600FC275C /* shuhao */;
+		};
+		9F9F90BB2FAB834800FC275C /* Exceptions for "shuhao" folder in "shuhao" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Frameworks/libflac/src/deduplication/bitreader_read_rice_signed_block.c,
+				Frameworks/libflac/src/deduplication/lpc_compute_autocorrelation_intrin_neon.c,
+				Frameworks/libflac/src/deduplication/lpc_compute_autocorrelation_intrin_sse2.c,
+				Frameworks/libflac/src/deduplication/lpc_compute_autocorrelation_intrin.c,
+				Info.plist,
+			);
+			target = 9F9F90942FAB834600FC275C /* shuhao */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		9F2153822FCC5A220063D17B /* ShuhaoWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9F21539D2FCC5BF10063D17B /* Exceptions for "ShuhaoWidget" folder in "shuhao" target */,
+				9F2153962FCC5A240063D17B /* Exceptions for "ShuhaoWidget" folder in "ShuhaoWidgetExtension" target */,
+			);
+			path = ShuhaoWidget;
+			sourceTree = "<group>";
+		};
+		9F9F90972FAB834600FC275C /* shuhao */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9F9F90BB2FAB834800FC275C /* Exceptions for "shuhao" folder in "shuhao" target */,
+			);
+			path = shuhao;
+			sourceTree = "<group>";
+		};
+		9F9F90AC2FAB834800FC275C /* shuhaoTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = shuhaoTests;
+			sourceTree = "<group>";
+		};
+		9F9F90B62FAB834800FC275C /* shuhaoUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = shuhaoUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9F2153792FCC5A210063D17B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9F2153812FCC5A220063D17B /* SwiftUI.framework in Frameworks */,
+				9F21537F2FCC5A220063D17B /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90922FAB834600FC275C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90A62FAB834800FC275C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90B02FAB834800FC275C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9F21537D2FCC5A210063D17B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9F21537E2FCC5A210063D17B /* WidgetKit.framework */,
+				9F2153802FCC5A220063D17B /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9F9F908C2FAB834600FC275C = {
+			isa = PBXGroup;
+			children = (
+				9F21539E2FCC60D60063D17B /* ShuhaoWidgetExtension.entitlements */,
+				9F9F90972FAB834600FC275C /* shuhao */,
+				9F9F90AC2FAB834800FC275C /* shuhaoTests */,
+				9F9F90B62FAB834800FC275C /* shuhaoUITests */,
+				9F2153822FCC5A220063D17B /* ShuhaoWidget */,
+				9F21537D2FCC5A210063D17B /* Frameworks */,
+				9F9F90962FAB834600FC275C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9F9F90962FAB834600FC275C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9F9F90952FAB834600FC275C /* shuhao.app */,
+				9F9F90A92FAB834800FC275C /* shuhaoTests.xctest */,
+				9F9F90B32FAB834800FC275C /* shuhaoUITests.xctest */,
+				9F21537C2FCC5A210063D17B /* ShuhaoWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9F21537B2FCC5A210063D17B /* ShuhaoWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9F2153932FCC5A240063D17B /* Build configuration list for PBXNativeTarget "ShuhaoWidgetExtension" */;
+			buildPhases = (
+				9F2153782FCC5A210063D17B /* Sources */,
+				9F2153792FCC5A210063D17B /* Frameworks */,
+				9F21537A2FCC5A210063D17B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9F2153822FCC5A220063D17B /* ShuhaoWidget */,
+			);
+			name = ShuhaoWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = ShuhaoWidgetExtension;
+			productReference = 9F21537C2FCC5A210063D17B /* ShuhaoWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		9F9F90942FAB834600FC275C /* shuhao */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9F9F90BC2FAB834800FC275C /* Build configuration list for PBXNativeTarget "shuhao" */;
+			buildPhases = (
+				9F9F90912FAB834600FC275C /* Sources */,
+				9F9F90922FAB834600FC275C /* Frameworks */,
+				9F9F90932FAB834600FC275C /* Resources */,
+				9F2153972FCC5A240063D17B /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9F2153912FCC5A240063D17B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9F9F90972FAB834600FC275C /* shuhao */,
+			);
+			name = shuhao;
+			packageProductDependencies = (
+			);
+			productName = shuhao;
+			productReference = 9F9F90952FAB834600FC275C /* shuhao.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9F9F90A82FAB834800FC275C /* shuhaoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9F9F90C12FAB834800FC275C /* Build configuration list for PBXNativeTarget "shuhaoTests" */;
+			buildPhases = (
+				9F9F90A52FAB834800FC275C /* Sources */,
+				9F9F90A62FAB834800FC275C /* Frameworks */,
+				9F9F90A72FAB834800FC275C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9F9F90AB2FAB834800FC275C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9F9F90AC2FAB834800FC275C /* shuhaoTests */,
+			);
+			name = shuhaoTests;
+			packageProductDependencies = (
+			);
+			productName = shuhaoTests;
+			productReference = 9F9F90A92FAB834800FC275C /* shuhaoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9F9F90B22FAB834800FC275C /* shuhaoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9F9F90C42FAB834800FC275C /* Build configuration list for PBXNativeTarget "shuhaoUITests" */;
+			buildPhases = (
+				9F9F90AF2FAB834800FC275C /* Sources */,
+				9F9F90B02FAB834800FC275C /* Frameworks */,
+				9F9F90B12FAB834800FC275C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9F9F90B52FAB834800FC275C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9F9F90B62FAB834800FC275C /* shuhaoUITests */,
+			);
+			name = shuhaoUITests;
+			packageProductDependencies = (
+			);
+			productName = shuhaoUITests;
+			productReference = 9F9F90B32FAB834800FC275C /* shuhaoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9F9F908D2FAB834600FC275C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					9F21537B2FCC5A210063D17B = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					9F9F90942FAB834600FC275C = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					9F9F90A82FAB834800FC275C = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 9F9F90942FAB834600FC275C;
+					};
+					9F9F90B22FAB834800FC275C = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 9F9F90942FAB834600FC275C;
+					};
+				};
+			};
+			buildConfigurationList = 9F9F90902FAB834600FC275C /* Build configuration list for PBXProject "shuhao" */;
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = 9F9F908C2FAB834600FC275C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9F9F90962FAB834600FC275C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9F9F90942FAB834600FC275C /* shuhao */,
+				9F9F90A82FAB834800FC275C /* shuhaoTests */,
+				9F9F90B22FAB834800FC275C /* shuhaoUITests */,
+				9F21537B2FCC5A210063D17B /* ShuhaoWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9F21537A2FCC5A210063D17B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90932FAB834600FC275C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90A72FAB834800FC275C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90B12FAB834800FC275C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9F2153782FCC5A210063D17B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90912FAB834600FC275C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90A52FAB834800FC275C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F9F90AF2FAB834800FC275C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9F2153912FCC5A240063D17B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 9F21537B2FCC5A210063D17B /* ShuhaoWidgetExtension */;
+			targetProxy = 9F2153902FCC5A240063D17B /* PBXContainerItemProxy */;
+		};
+		9F9F90AB2FAB834800FC275C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9F9F90942FAB834600FC275C /* shuhao */;
+			targetProxy = 9F9F90AA2FAB834800FC275C /* PBXContainerItemProxy */;
+		};
+		9F9F90B52FAB834800FC275C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9F9F90942FAB834600FC275C /* shuhao */;
+			targetProxy = 9F9F90B42FAB834800FC275C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		9F2153942FCC5A240063D17B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ShuhaoWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShuhaoWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShuhaoWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhao.ShuhaoWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9F2153952FCC5A240063D17B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ShuhaoWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShuhaoWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShuhaoWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhao.ShuhaoWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9F9F90BD2FAB834800FC275C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = shuhao/shuhao.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				ENABLE_PREVIEWS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"HAVE_CONFIG_H=1",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/shuhao/Frameworks/libflac/include";
+				INFOPLIST_FILE = shuhao/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhao;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "shuhao/shuhao-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9F9F90BE2FAB834800FC275C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = shuhao/shuhao.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				ENABLE_PREVIEWS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"HAVE_CONFIG_H=1",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/shuhao/Frameworks/libflac/include";
+				INFOPLIST_FILE = shuhao/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.2.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhao;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "shuhao/shuhao-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9F9F90BF2FAB834800FC275C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		9F9F90C02FAB834800FC275C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9F9F90C22FAB834800FC275C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhaoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/shuhao.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/shuhao";
+			};
+			name = Debug;
+		};
+		9F9F90C32FAB834800FC275C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhaoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/shuhao.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/shuhao";
+			};
+			name = Release;
+		};
+		9F9F90C52FAB834800FC275C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhaoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = shuhao;
+			};
+			name = Debug;
+		};
+		9F9F90C62FAB834800FC275C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G5PXDM7897;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heartbeat.shuhaoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = shuhao;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9F2153932FCC5A240063D17B /* Build configuration list for PBXNativeTarget "ShuhaoWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F2153942FCC5A240063D17B /* Debug */,
+				9F2153952FCC5A240063D17B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9F9F90902FAB834600FC275C /* Build configuration list for PBXProject "shuhao" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F9F90BF2FAB834800FC275C /* Debug */,
+				9F9F90C02FAB834800FC275C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9F9F90BC2FAB834800FC275C /* Build configuration list for PBXNativeTarget "shuhao" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F9F90BD2FAB834800FC275C /* Debug */,
+				9F9F90BE2FAB834800FC275C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9F9F90C12FAB834800FC275C /* Build configuration list for PBXNativeTarget "shuhaoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F9F90C22FAB834800FC275C /* Debug */,
+				9F9F90C32FAB834800FC275C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9F9F90C42FAB834800FC275C /* Build configuration list for PBXNativeTarget "shuhaoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F9F90C52FAB834800FC275C /* Debug */,
+				9F9F90C62FAB834800FC275C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9F9F908D2FAB834600FC275C /* Project object */;
+}
