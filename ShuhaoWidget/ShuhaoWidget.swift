@@ -102,7 +102,7 @@ private struct NowPlayingWidgetView: View {
                                secondary: np.currentLyric ?? np.artist,
                                isLyric: np.currentLyric != nil)
                 Spacer(minLength: 0)
-                intentButton( PlayPauseIntent()) {
+                transportButton(command: "com.heartbeat.shuhao.command.playpause") {
                     Image(systemName: np.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(brandGradient)
@@ -115,7 +115,7 @@ private struct NowPlayingWidgetView: View {
                 cover(title: recent.title, path: recent.coverLocalPath, size: 72)
                 titleArtist(title: recent.title, artist: recent.artist)
                 Spacer(minLength: 0)
-                intentButton( PlayRecentIntent()) {
+                transportButton(command: "com.heartbeat.shuhao.command.playRecent") {
                     Label("继续播放", systemImage: "play.fill")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
@@ -160,7 +160,7 @@ private struct NowPlayingWidgetView: View {
                         .padding(.top, 6)
                 } else if let recent = entry.mostRecent {
                     titleArtist(title: recent.title, artist: recent.artist, titleSize: 14)
-                    intentButton( PlayRecentIntent()) {
+                    transportButton(command: "com.heartbeat.shuhao.command.playRecent") {
                         Label("继续播放", systemImage: "play.fill")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
@@ -250,14 +250,14 @@ private struct NowPlayingWidgetView: View {
 
     private func transportRow(isPlaying: Bool) -> some View {
         HStack(spacing: 16) {
-            intentButton( PreviousTrackIntent()) {
+            transportButton(command: "com.heartbeat.shuhao.command.previous") {
                 Image(systemName: "backward.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
             }
             .buttonStyle(.plain)
-            intentButton( PlayPauseIntent()) {
+            transportButton(command: "com.heartbeat.shuhao.command.playpause") {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(brandGradient)
@@ -265,7 +265,7 @@ private struct NowPlayingWidgetView: View {
                     .background(Color.white.opacity(0.14), in: Circle())
             }
             .buttonStyle(.plain)
-            intentButton( NextTrackIntent()) {
+            transportButton(command: "com.heartbeat.shuhao.command.next") {
                 Image(systemName: "forward.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
@@ -329,38 +329,31 @@ private struct NowPlayingWidgetView: View {
     }
 }
 
-#Preview(as: .systemSmall) {
-    ShuhaoWidget()
-} timeline: {
-    NowPlayingEntry(date: .now,
-        nowPlaying: SharedNowPlaying(trackID: "kw_xx", title: "黄昏", artist: "周传雄",
-            coverLocalPath: nil, isPlaying: true, elapsed: 80, duration: 343,
-            currentLyric: "过完整个夏天 忧伤并没有好一些",
-            updatedAt: .now),
-        mostRecent: nil)
-}
-
-#Preview(as: .systemMedium) {
-    ShuhaoWidget()
-} timeline: {
-    NowPlayingEntry(date: .now,
-        nowPlaying: SharedNowPlaying(trackID: "kw_xx", title: "黄昏", artist: "周传雄",
-            coverLocalPath: nil, isPlaying: true, elapsed: 80, duration: 343,
-            currentLyric: "过完整个夏天 忧伤并没有好一些",
-            updatedAt: .now),
-        mostRecent: nil)
-}
-
 // MARK: - iOS 16 兼容性辅助
 
-/// Button(intent:) 初始化器仅 iOS 17+。iOS 16 无该 API,改用 Button(action:)
-/// 在内部 Task 中直接调用 intent.perform() 驱动同一套 AppIntent 逻辑。
+/// 小组件传输按钮的跨版本封装。
+/// - iOS 17+：使用 `Button(intent:)` 配合 `AudioPlaybackIntent`(如 PlayPauseIntent),
+///   系统会为媒体传输动作授予后台音频会话,锁屏控制更顺滑。
+/// - iOS 16：`Button(intent:)` 与 `AudioPlaybackIntent` 均不存在,改为直接 `postDarwin`
+///   发送 Darwin 通知,主 App 的 `CommandBridge` 收到后驱动播放引擎 —— 功能等价。
+/// intent 仅在 iOS 17 分支内构造,避免 iOS 16 目标引用 iOS 17 专属类型而编译失败。
 @ViewBuilder
-fileprivate func intentButton<I: AppIntent>(_ intent: I, @ViewBuilder label: () -> some View) -> some View {
+fileprivate func transportButton(command: String, @ViewBuilder label: () -> some View) -> some View {
     if #available(iOS 17.0, *) {
-        Button(intent: intent, label: label)
+        switch command {
+        case "com.heartbeat.shuhao.command.playpause":
+            Button(intent: PlayPauseIntent(), label: label)
+        case "com.heartbeat.shuhao.command.next":
+            Button(intent: NextTrackIntent(), label: label)
+        case "com.heartbeat.shuhao.command.previous":
+            Button(intent: PreviousTrackIntent(), label: label)
+        case "com.heartbeat.shuhao.command.playRecent":
+            Button(intent: PlayRecentIntent(), label: label)
+        default:
+            Button(action: { postDarwin(command) }, label: label)
+        }
     } else {
-        Button(action: { Task { _ = try? await intent.perform() } }, label: label)
+        Button(action: { postDarwin(command) }, label: label)
     }
 }
 

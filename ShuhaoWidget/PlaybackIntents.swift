@@ -9,7 +9,7 @@ import Foundation
 /// system grants the audio session and lets the app keep playing without
 /// foregrounding the UI.
 
-private func postDarwin(_ name: String) {
+func postDarwin(_ name: String) {
     let cf = CFNotificationName(name as CFString)
     CFNotificationCenterPostNotification(
         CFNotificationCenterGetDarwinNotifyCenter(),
