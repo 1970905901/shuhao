@@ -77,7 +77,7 @@ struct QueueView: View {
                     Image(systemName: playback.isPlaying ? "waveform" : "speaker.wave.2.fill")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.accentColor)
-                        .symbolEffect(.variableColor.iterative, isActive: playback.isPlaying)
+                        .variableColorEffect(isActive: playback.isPlaying)
                 } else {
                     Text("\(idx + 1)")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -148,4 +148,16 @@ struct QueueView: View {
     }
 
     private func format(_ s: Int) -> String { String(format: "%d:%02d", s / 60, s % 60) }
+}
+
+// symbolEffect(.variableColor.iterative) 仅 iOS 17+ 可用;iOS 16 上等价降级为无动画。
+extension View {
+    @ViewBuilder
+    func variableColorEffect(isActive: Bool) -> some View {
+        if #available(iOS 17.0, *) {
+            self.symbolEffect(.variableColor.iterative, isActive: isActive)
+        } else {
+            self
+        }
+    }
 }

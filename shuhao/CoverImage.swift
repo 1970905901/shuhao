@@ -250,7 +250,12 @@ struct CoverImage<Content: View, Placeholder: View>: View {
         }
         // .task 不执行的宿主环境靠这条兜底:onChange 跟着 body 求值走,
         // 起一个脱离视图生命周期的任务去下载,下完由 signal 驱动重绘。
-        .onChange(of: url, initial: true) { _, newURL in
+        // iOS 16 的 .onChange 不支持 initial: 参数,拆成 onAppear + onChange 等价实现。
+        .onAppear {
+            guard let u = url, CoverImageCache.cached(u, maxPixel: maxPixel) == nil else { return }
+            Task { _ = await CoverImageCache.load(u, maxPixel: maxPixel) }
+        }
+        .onChange(of: url) { newURL in
             guard CoverImageCache.cached(newURL, maxPixel: maxPixel) == nil else { return }
             Task { _ = await CoverImageCache.load(newURL, maxPixel: maxPixel) }
         }

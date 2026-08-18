@@ -160,7 +160,7 @@ struct SearchView: View {
         }
         // 同 ChipBar:抵消 RootTabView 广播下来的底部留白,否则这条横向 scope 条
         // 下面会多出一大片空白(那份留白是给迷你播放器让位用的,只该作用于纵向列表)。
-        .contentMargins(.bottom, 0, for: .scrollContent)
+        .bottomContentMargin(0)
     }
 
     private func resultsList(_ results: [Track]) -> some View {

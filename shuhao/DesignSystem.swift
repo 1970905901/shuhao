@@ -222,7 +222,7 @@ struct ChipBar<T: Hashable>: View {
         // 那个修饰符是走环境广播的,子树里**所有**滚动视图都会吃到 —— 包括这条横向
         // chip 条,于是 chip 下面凭空多出一大片空白。这里显式复位成 0。
         // 新增横向 ScrollView 时记得照做。
-        .contentMargins(.bottom, 0, for: .scrollContent)
+        .bottomContentMargin(0)
         // Subtle haptic on every selection change — the kind of "click" Apple uses on
         // segmented controls. Doesn't fire on the initial value, only on change.
         .sensoryFeedback(.selection, trigger: selection)
@@ -578,5 +578,19 @@ struct PlayerBackdrop: View {
             Color.black.opacity(0.15)
         }
         .ignoresSafeArea()
+    }
+}
+
+// 给迷你播放器让位的底部滚动留白。.contentMargins(.bottom, for: .scrollContent) 仅 iOS 17+,
+// 这里按系统版本走等价实现:iOS 17+ 用 contentMargins(沿环境广播给子树滚动视图),
+// iOS 16 用 safeAreaInset(同样沿安全区继承到嵌套滚动视图,含 push 页)。
+extension View {
+    @ViewBuilder
+    func bottomContentMargin(_ value: CGFloat) -> some View {
+        if #available(iOS 17.0, *) {
+            self.contentMargins(.bottom, value, for: .scrollContent)
+        } else {
+            self.safeAreaInset(edge: .bottom) { Color.clear.frame(height: value) }
+        }
     }
 }

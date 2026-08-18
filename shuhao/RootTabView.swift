@@ -213,9 +213,7 @@ struct RootTabView: View {
         // 让位。.contentMargins 通过环境传递给子树里所有滚动视图,包括
         // NavigationStack push 出来的二级页 —— 这正是 safeAreaInset 到不了的地方。
         // 没歌在放时不留白,免得列表底部凭空多一块空隙。
-        .contentMargins(.bottom,
-                        now.track != nil ? MiniPlayerMetrics.scrollBottomMargin : 0,
-                        for: .scrollContent)
+        .bottomContentMargin(now.track != nil ? MiniPlayerMetrics.scrollBottomMargin : 0)
     }
 
     // MARK: - Overlays (mini player, error banner, full player)
