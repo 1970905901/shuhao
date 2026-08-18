@@ -26,6 +26,7 @@ extension View {
 
     /// iOS 16 no-op replacement for `sensoryFeedback(_:trigger:)` (iOS 17+).
     /// On iOS 16 we simply drop the haptic — the surrounding UI is unaffected.
+    @ViewBuilder
     func shSensoryFeedback<V: Equatable>(_ trigger: V) -> some View {
         if #available(iOS 17.0, *) {
             sensoryFeedback(.selection, trigger: trigger)
