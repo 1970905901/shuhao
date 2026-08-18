@@ -1,10 +1,9 @@
 import Foundation
 
-/// Snapshot of recently-played tracks for the home-screen widget.
-///
-/// **Target membership note:** must belong to both `shuhao` and `ShuhaoWidget`
-/// targets (the app writes, the widget reads). Stored in shared UserDefaults via
-/// `SharedAppGroup.defaults` — small enough to fit comfortably (a few KB).
+/// Snapshot of recently-played tracks, written by the main app to the shared
+/// App Group container (the home-screen widget target that used to read it was
+/// removed). Stored in shared UserDefaults via `SharedAppGroup.defaults` —
+/// small enough to fit comfortably (a few KB).
 struct SharedRecentTrack: Codable, Hashable, Identifiable {
     /// Stable id for `ForEach` / list diffing.
     var id: String

@@ -1,11 +1,12 @@
 import Foundation
 
 /// Constants + helpers for the shared App Group container that bridges the
-/// main app, the Live Activity, and the home-screen widget.
+/// main app with system surfaces (Siri / Shortcuts, a future Live Activity,
+/// the now-playing / recent-plays snapshot).
 ///
-/// **Target membership note:** must belong to *both* `shuhao` and
-/// `ShuhaoWidget` targets (set both checkboxes in File Inspector → Target
-/// Membership). Both processes need to read/write the same container.
+/// Lives in the `shuhao` target only (the home-screen widget target was
+/// removed). The App Group container lets the app share state with those
+/// surfaces.
 enum SharedAppGroup {
     /// Must match the App Group ID configured under Signing & Capabilities on
     /// both targets in Xcode.

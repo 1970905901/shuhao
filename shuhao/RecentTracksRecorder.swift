@@ -1,22 +1,23 @@
 import Foundation
 import Combine
-import WidgetKit
 
-/// Watches PlaybackEngine for track changes and keeps the home-screen widget's
-/// data fresh: downloads the cover to the App Group container, pushes a
-/// `SharedRecentTrack` entry, and asks WidgetCenter to reload timelines.
+/// Watches PlaybackEngine for track changes and records the home-screen
+/// "recent plays" / "now playing" snapshot into the App Group container
+/// (`SharedRecentStore` / `SharedNowPlayingStore`): downloads the cover to the
+/// shared container and pushes a `SharedRecentTrack` entry on every track change.
 ///
-/// This was previously folded into `LiveActivityController`; now that LA is
-/// gone, the widget still needs the same data flow, so it lives here as a
-/// dedicated, single-responsibility component.
+/// Historically this fed the home-screen widget via `WidgetCenter`; the widget
+/// target was removed, but the recording logic is kept (it's cheap and the
+/// shared store can still be consumed by other surfaces, e.g. a future
+/// Live Activity or Shortcuts lookup).
 @MainActor
 final class RecentTracksRecorder: ObservableObject {
     private weak var playback: PlaybackEngine?
     private var cancellables = Set<AnyCancellable>()
     private var lastTrackID: String?
-    /// Last lyric we wrote to the widget store — used to dedupe so we only
-    /// reload widgets when the line actually changes (otherwise WidgetKit
-    /// throttles us into uselessness within minutes).
+    /// Last lyric we wrote to the shared store — used to dedupe so we only
+    /// re-snapshot when the active line actually changes (avoids redundant
+    /// writes to the App Group container on every 1 Hz tick).
     private var lastLyric: String?
 
     func bind(to playback: PlaybackEngine) {
@@ -24,9 +25,9 @@ final class RecentTracksRecorder: ObservableObject {
         // Two observers. Both use `.receive(on: DispatchQueue.main)` to hop to
         // the next runloop: Combine's `@Published` emits in `willSet`, so if we
         // read `playback.isPlaying` synchronously in the sink we'd see the
-        // *old* value (widget would then render the inverted play/pause state).
-        // Hopping one runloop lets `didSet` complete and the property reflect
-        // its new value before we snapshot.
+        // *old* value (the snapshot would then capture the inverted play/pause
+        // state). Hopping one runloop lets `didSet` complete and the property
+        // reflect its new value before we snapshot.
         playback.$currentTrack
             .removeDuplicates(by: { $0?.id == $1?.id })
             .receive(on: DispatchQueue.main)
@@ -38,8 +39,8 @@ final class RecentTracksRecorder: ObservableObject {
             .sink { [weak self] _ in self?.snapshotNowPlaying() }
             .store(in: &cancellables)
         // Lyric-line watcher: throttle currentTime to ~1 Hz, only re-snapshot
-        // when the active line text actually changes. Keeps the widget within
-        // its hourly reloadAllTimelines budget while still feeling "live".
+        // when the active line text actually changes. Keeps the shared store
+        // fresh without writing on every tick.
         playback.$currentTime
             .throttle(for: .seconds(1), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] _ in self?.refreshLyricIfChanged() }
@@ -55,13 +56,12 @@ final class RecentTracksRecorder: ObservableObject {
     }
 
     /// Writes the current snapshot (title/artist/cover/isPlaying/elapsed/lyric)
-    /// into the App-Group store and reloads widget timelines. The widget
-    /// extrapolates `elapsed` from `updatedAt` so we don't need to write every second.
+    /// into the App-Group store. Consumers extrapolate `elapsed` from `updatedAt`
+    /// so we don't need to write every second.
     private func snapshotNowPlaying() {
         guard let playback else { return }
         guard let track = playback.currentTrack else {
             SharedNowPlayingStore.clear()
-            WidgetCenter.shared.reloadAllTimelines()
             return
         }
         let snapshot = SharedNowPlaying(
@@ -76,13 +76,11 @@ final class RecentTracksRecorder: ObservableObject {
             updatedAt: Date()
         )
         SharedNowPlayingStore.write(snapshot)
-        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func handleTrackChange(_ track: Track?) {
         guard let track else {
             SharedNowPlayingStore.clear()
-            WidgetCenter.shared.reloadAllTimelines()
             return
         }
         guard track.id != lastTrackID else { return }
@@ -95,9 +93,9 @@ final class RecentTracksRecorder: ObservableObject {
         let sourceName = track.source.displayName
         let coverURL = track.picURL
 
-        // Push immediately without cover so widget can show *something* within
-        // seconds (brand-gradient + first-character placeholder), then update
-        // again once the real image is on disk.
+        // Push immediately without cover so the recent-plays tile can show
+        // *something* within seconds (brand-gradient + first-character
+        // placeholder), then update again once the real image is on disk.
         SharedRecentStore.push(SharedRecentTrack(
             id: id, title: title, artist: artist,
             coverLocalPath: nil, sourceName: sourceName))
