@@ -3,11 +3,6 @@ import UIKit
 
 @main
 struct shuhaoApp: App {
-    /// Mac Catalyst 关掉"窗口关闭 = 退出 app"行为靠 ShuhaoAppDelegate 暴露的
-    /// `applicationShouldTerminateAfterLastWindowClosed:` —— Catalyst runtime
-    /// 会自动把 NSApplicationDelegate 调用转发到我们的 UIApplicationDelegate。
-    @UIApplicationDelegateAdaptor(ShuhaoAppDelegate.self) private var appDelegate
-
     @StateObject private var playback: PlaybackEngine
     @StateObject private var sources: SourceManager
     @StateObject private var playlists: PlaylistStore
