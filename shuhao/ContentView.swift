@@ -5,12 +5,3 @@ struct ContentView: View {
         RootTabView()
     }
 }
-
-#Preview {
-    ContentView()
-        .environmentObject(PlaybackEngine())
-        .environmentObject(SourceManager())
-        .environmentObject(PlaylistStore())
-        .environmentObject(ScriptStore())
-        .environmentObject(SettingsStore())
-}

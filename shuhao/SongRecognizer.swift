@@ -39,7 +39,17 @@ final class SongRecognizer: ObservableObject {
         state = .listening
         permissionTask = Task { [weak self] in
             guard let self else { return }
-            let granted = await AVAudioApplication.requestRecordPermission()
+            let granted: Bool
+            if #available(iOS 17.0, *) {
+                granted = await AVAudioApplication.requestRecordPermission()
+            } else {
+                // iOS 16 没有 AVAudioApplication 的异步请求方式,用 AVAudioSession 闭包式(iOS 8+)兜底。
+                granted = await withCheckedContinuation { continuation in
+                    AVAudioSession.sharedInstance().requestRecordPermission { ok in
+                        continuation.resume(returning: ok)
+                    }
+                }
+            }
             guard !Task.isCancelled else { return }
             guard granted else { self.state = .micDenied; return }
             self.beginListening()
