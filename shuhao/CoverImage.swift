@@ -216,8 +216,6 @@ struct CoverImage<Content: View, Placeholder: View>: View {
     /// 播放页的封面视图身份是稳定的(切歌不重建),所以不能只靠 url 变化驱动。
     @State private var retryToken = 0
     @Environment(\.scenePhase) private var scenePhase
-    /// 缓存有新图落地就重绘一次,配合 body 里的同步兜底取图
-    @ObservedObject private var cacheSignal = CoverCacheSignal.shared
 
     init(url: String?,
          maxPixel: CGFloat,

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct PlayerView: View {
     @EnvironmentObject var playback: PlaybackEngine
@@ -28,12 +29,20 @@ struct PlayerView: View {
     @State private var loadingMv = false
     /// Toast-like message shown briefly after MV resolution fails / starts.
     @State private var mvNotice: String?
-    /// Vertical drag-down to dismiss.
+    /// 是否处于"已展开"。由 RootTabView 用动画驱动:true 时停在 dragOffset
+    /// (通常 0),false 时整屏下移离屏。进出场都是纯 transform,SwiftUI 不会对
+    /// 本视图(它直接观察 PlaybackEngine,每 0.25s 重绘)做快照过渡 —— 那正是
+    /// 关闭瞬间残留影的根因。
+    @Binding var isOpen: Bool
+    /// Vertical drag-down to dismiss. 仅在真正拖动中 >0;静止时为 0。
     @State private var dragOffset: CGFloat = 0
     /// Horizontal left-edge swipe-back. Tracked separately from `dragOffset`
     /// so the two gestures can be active simultaneously without arithmetic
     /// conflicts.
     @State private var swipeBackOffset: CGFloat = 0
+
+    /// 进出场弹簧,与 RootTabView.openPlayer / dismissPlayer 手感一致。
+    static let playerSpring = Animation.spring(response: 0.42, dampingFraction: 0.82)
 
     /// Shared selector — see `PlaybackCycleMode` in PlaybackEngine.swift.
     private var cycleMode: PlaybackCycleMode {
@@ -91,7 +100,8 @@ struct PlayerView: View {
         .preferredColorScheme(.dark)
         // Stack the two dismissal offsets — vertical for swipe-down, horizontal
         // for left-edge swipe-back. Either one closes the player.
-        .offset(x: swipeBackOffset, y: dragOffset)
+        .offset(x: isOpen ? swipeBackOffset : 0,
+                y: isOpen ? dragOffset : UIScreen.main.bounds.height)
         // Custom drag-to-dismiss. fullScreenCover doesn't have sheet's built-in swipe-down,
         // so we re-implement it: track downward drags from the top ~180pt strip (now wider
         // since the chrome — chevron/menu buttons — is gone), dismiss if >120pt or fast
@@ -134,6 +144,12 @@ struct PlayerView: View {
         )
         .onAppear {
             sync()
+        }
+        // isOpen 翻成 false(关闭)时把拖动残余量归零:这样既不影响"从当前拖动位置
+        // 滑出"的动画(关闭瞬间 offset 已是整屏高,忽略 dragOffset),又能保证随后
+        // 若快速重开时从干净位置(0)滑入,不会卡在半路。
+        .shOnChange(of: isOpen) {
+            if !isOpen { dragOffset = 0; swipeBackOffset = 0 }
         }
         .shOnChange(of: playback.currentTrack?.id) { sync() }
         // All sheets below are forced back to the system's real color scheme +

@@ -115,7 +115,14 @@ struct RootTabView: View {
     @ObservedObject private var tabBar = TabBarMetrics.shared
     @EnvironmentObject var settings: SettingsStore
     @Environment(\.horizontalSizeClass) private var hSize
-    @State private var showPlayer = false
+    /// 播放器是否挂载在视图树上。进出场动画由 isOpen 绑定驱动(纯 transform,
+    /// 无快照),这里只负责挂/卸,避免 .transition 快照造成的关闭残影。
+    @State private var playerMounted = false
+    /// 是否展开:true 停在屏内,false 整屏下移离屏。滑入/滑出都靠这个 Bool 做动画。
+    @State private var playerOpen = false
+    /// 每次打开 +1。关闭动画(滑出约 0.55s)期间若又快速重开,playerToken 会变,
+    /// 延后卸载就不会误把刚重开的播放器卸掉。
+    @State private var playerToken = 0
     @State private var leaderboardPath = NavigationPath()
     @State private var songlistPath = NavigationPath()
     @State private var libraryPath = NavigationPath()
@@ -146,8 +153,25 @@ struct RootTabView: View {
     /// IPadRootView's bottom bar so tapping the cover/title in the QQ-style
     /// bar opens the same modal player the iPhone MiniPlayer opens.
     private func openPlayer() {
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
-            showPlayer = true
+        // 仅 iPhone 走这套挂载/展开;iPad/Mac 有各自的内容区切换,不挂这里的浮层。
+        guard hSize == .compact, !isCatalyst else { return }
+        // 挂载(先以 off-screen 状态挂一帧),下一拍再动画展开,避免首帧闪现。
+        // 展开由 isOpen 绑定驱动 —— 纯 transform,绝不做快照过渡(否则关闭残影)。
+        playerToken += 1
+        playerMounted = true
+        DispatchQueue.main.async {
+            withAnimation(PlayerView.playerSpring) { playerOpen = true }
+        }
+    }
+
+    /// 用户拖动越过阈值后由 PlayerView 调来。滑出动画交给 isOpen=false 驱动,
+    /// 动画跑完(约 0.55s)再卸载本视图 —— 此时它已整屏离屏,卸载无缝。
+    private func dismissPlayer() {
+        let token = playerToken
+        withAnimation(PlayerView.playerSpring) { playerOpen = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+            // 这 0.55s 内若又重开,playerToken 会变,就不卸载刚重开的播放器。
+            if token == playerToken { playerMounted = false }
         }
     }
 
@@ -225,14 +249,11 @@ struct RootTabView: View {
         // PlayerView overlay only fires for iPhone (compact). iPad/Mac own
         // their player as a content-area swap inside IPadRootView so the
         // persistent IPadBottomBar stays visible like QQ 音乐 桌面端.
-        if showPlayer, hSize == .compact, !isCatalyst {
-            PlayerView(onClose: {
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
-                    showPlayer = false
-                }
-            })
-            .transition(.move(edge: .bottom))
-            .zIndex(10)
+        if playerMounted, hSize == .compact, !isCatalyst {
+            // isOpen 绑定驱动滑入/滑出(纯 transform);onClose 由 PlayerView 在
+            // 拖动越阈值时调来,经 dismissPlayer 做滑出 + 延后卸载。
+            PlayerView(isOpen: $playerOpen, onClose: dismissPlayer)
+                .zIndex(10)
         }
     }
 }
