@@ -50,58 +50,9 @@ jobs:
           name: shuhao-ios-ipa
           path: shuhao-unsigned.ipa
 
-  build-macos:
-    name: Build macOS DMG (unsigned, Catalyst)
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Show Xcode / SDKs
-        run: |
-          xcodebuild -version
-          xcodebuild -showsdks
-
-      - name: Build Mac Catalyst app (unsigned)
-        run: |
-          set -euo pipefail
-          DERIVED="$PWD/build/mac-derived"
-          xcodebuild -project shuhao.xcodeproj \
-            -scheme shuhao \
-            -configuration Release \
-            -destination 'generic/platform=macOS,variant=Mac Catalyst' \
-            -derivedDataPath "$DERIVED" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            build | tail -20
-          APP=$(find "$DERIVED/Build/Products/Release-maccatalyst" -name "shuhao.app" -maxdepth 1 | head -1)
-          echo "APP=$APP"
-          [ -d "$APP" ] || { echo "macOS .app not found"; exit 1; }
-          echo "$APP" > app_path.txt
-
-      - name: Package DMG (hdiutil)
-        run: |
-          set -euo pipefail
-          APP=$(cat app_path.txt)
-          STAGE="$PWD/build/dmg-stage"
-          rm -rf "$STAGE"
-          mkdir -p "$STAGE"
-          cp -R "$APP" "$STAGE/"
-          ln -s /Applications "$STAGE/Applications"
-          hdiutil create -volname "shuhao" -srcfolder "$STAGE" -ov -format UDZO build/shuhao-unsigned.dmg
-          ls -lh build/shuhao-unsigned.dmg
-
-      - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: shuhao-macos-dmg
-          path: build/shuhao-unsigned.dmg
-
   release:
     name: Publish release (on tag)
-    needs: [build-ios, build-macos]
+    needs: [build-ios]
     if: startsWith(github.ref, 'refs/tags/shuhao_v')
     runs-on: ubuntu-latest
     permissions:
@@ -120,4 +71,3 @@ jobs:
           generate_release_notes: true
           files: |
             out/shuhao-unsigned.ipa
-            out/shuhao-unsigned.dmg

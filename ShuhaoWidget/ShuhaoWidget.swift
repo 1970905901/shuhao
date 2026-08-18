@@ -61,7 +61,7 @@ struct ShuhaoWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: NowPlayingProvider()) { entry in
             NowPlayingWidgetView(entry: entry)
-                .containerBackground(for: .widget) {
+                .shuhaoWidgetBackground {
                     ZStack {
                         Color(red: 0.04, green: 0.02, blue: 0.07)  // bgBase
                         brandGradient.opacity(0.18)
@@ -102,7 +102,7 @@ private struct NowPlayingWidgetView: View {
                                secondary: np.currentLyric ?? np.artist,
                                isLyric: np.currentLyric != nil)
                 Spacer(minLength: 0)
-                Button(intent: PlayPauseIntent()) {
+                intentButton( PlayPauseIntent()) {
                     Image(systemName: np.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(brandGradient)
@@ -115,7 +115,7 @@ private struct NowPlayingWidgetView: View {
                 cover(title: recent.title, path: recent.coverLocalPath, size: 72)
                 titleArtist(title: recent.title, artist: recent.artist)
                 Spacer(minLength: 0)
-                Button(intent: PlayRecentIntent()) {
+                intentButton( PlayRecentIntent()) {
                     Label("继续播放", systemImage: "play.fill")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
@@ -160,7 +160,7 @@ private struct NowPlayingWidgetView: View {
                         .padding(.top, 6)
                 } else if let recent = entry.mostRecent {
                     titleArtist(title: recent.title, artist: recent.artist, titleSize: 14)
-                    Button(intent: PlayRecentIntent()) {
+                    intentButton( PlayRecentIntent()) {
                         Label("继续播放", systemImage: "play.fill")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
@@ -250,14 +250,14 @@ private struct NowPlayingWidgetView: View {
 
     private func transportRow(isPlaying: Bool) -> some View {
         HStack(spacing: 16) {
-            Button(intent: PreviousTrackIntent()) {
+            intentButton( PreviousTrackIntent()) {
                 Image(systemName: "backward.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
             }
             .buttonStyle(.plain)
-            Button(intent: PlayPauseIntent()) {
+            intentButton( PlayPauseIntent()) {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(brandGradient)
@@ -265,7 +265,7 @@ private struct NowPlayingWidgetView: View {
                     .background(Color.white.opacity(0.14), in: Circle())
             }
             .buttonStyle(.plain)
-            Button(intent: NextTrackIntent()) {
+            intentButton( NextTrackIntent()) {
                 Image(systemName: "forward.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
@@ -349,4 +349,29 @@ private struct NowPlayingWidgetView: View {
             currentLyric: "过完整个夏天 忧伤并没有好一些",
             updatedAt: .now),
         mostRecent: nil)
+}
+
+// MARK: - iOS 16 兼容性辅助
+
+/// Button(intent:) 初始化器仅 iOS 17+。iOS 16 无该 API,改用 Button(action:)
+/// 在内部 Task 中直接调用 intent.perform() 驱动同一套 AppIntent 逻辑。
+@ViewBuilder
+fileprivate func intentButton<I: AppIntent>(_ intent: I, @ViewBuilder label: () -> some View) -> some View {
+    if #available(iOS 17.0, *) {
+        Button(intent: intent, label: label)
+    } else {
+        Button(action: { Task { _ = try? await intent.perform() } }, label: label)
+    }
+}
+
+/// containerBackground(for:) 仅 iOS 17+。iOS 16 小组件用 .background 等价设置背景。
+extension View {
+    @ViewBuilder
+    fileprivate func shuhaoWidgetBackground<Background: View>(@ViewBuilder _ content: () -> Background) -> some View {
+        if #available(iOS 17.0, *) {
+            self.containerBackground(for: .widget) { content() }
+        } else {
+            self.background(content())
+        }
+    }
 }
