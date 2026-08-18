@@ -85,7 +85,7 @@ struct IPadRootView: View {
         .environmentObject(searchSession)
         // Reset push stack when the user picks a different sidebar entry
         // (going from "排行榜" to "歌单" shouldn't keep a 排行榜 detail pushed).
-        .onChange(of: rawSelection) { _, _ in
+        .shOnChange(of: rawSelection) {
             path = NavigationPath()
         }
         // Mac 状态栏菜单 → 切到搜索 / 打开播放器 —— 见 MacStatusBarController。

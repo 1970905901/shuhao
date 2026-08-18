@@ -135,7 +135,7 @@ struct PlayerView: View {
         .onAppear {
             sync()
         }
-        .onChange(of: playback.currentTrack?.id) { _, _ in sync() }
+        .shOnChange(of: playback.currentTrack?.id) { sync() }
         // All sheets below are forced back to the system's real color scheme +
         // re-injected with the brand tint. Both default-inherit through SwiftUI
         // ancestors, but `.preferredColorScheme` re-roots the sheet so we lose
@@ -718,10 +718,10 @@ struct LyricsScroll: View {
                     startPoint: .top, endPoint: .bottom
                 )
             )
-            .onChange(of: active) { _, new in
-                if let new {
+            .shOnChange(of: active) {
+                if let active {
                     withAnimation(.easeInOut(duration: 0.45)) {
-                        proxy.scrollTo(lines[new].id, anchor: .center)
+                        proxy.scrollTo(lines[active].id, anchor: .center)
                     }
                 }
             }

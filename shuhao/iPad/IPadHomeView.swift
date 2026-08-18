@@ -84,7 +84,7 @@ struct IPadHomeView: View {
                 .frame(height: 280)
                 .padding(.top, 8)
                 // 手动滑动后重置自动切换的计时,不让 timer 立刻切走用户刚选的页
-                .onChange(of: heroIndex) { _, _ in
+                .shOnChange(of: heroIndex) {
                     restartHeroTimer()
                 }
 

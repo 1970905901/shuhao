@@ -73,8 +73,8 @@ struct IPadVinylDisc: View {
             if isPlaying { startTicker() }
         }
         .onDisappear { stopTicker() }
-        .onChange(of: isPlaying) { _, newPlaying in
-            if newPlaying {
+        .shOnChange(of: isPlaying) {
+            if isPlaying {
                 startTicker()
             } else {
                 stopTicker()

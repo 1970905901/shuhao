@@ -82,7 +82,7 @@ struct IPadSonglistView: View {
         }
         .background(IPad.Color.contentBackground)
         // 源切换时清空 tag + keyword,跟 iPhone 行为一致
-        .onChange(of: selectedSourceRaw) {
+        .shOnChange(of: selectedSourceRaw) {
             selectedTag = .all
             tagGroups = []
             tagsLoadedSource = nil

@@ -139,8 +139,8 @@ struct BoardDetailView: View {
             if isLoading && tracks.isEmpty {
                 LoadingPlaceholder()
             } else if let error, tracks.isEmpty {
-                ContentUnavailableView("加载失败", systemImage: "exclamationmark.triangle",
-                                       description: Text(error))
+                ShUnavailableView(title: "加载失败", systemImage: "exclamationmark.triangle",
+                                  description: Text(error))
             } else {
                 List {
                     Section {

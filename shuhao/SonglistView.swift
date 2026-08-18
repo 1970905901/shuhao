@@ -66,7 +66,7 @@ struct SonglistView: View {
                 if isLoading && playlists.isEmpty {
                     LoadingPlaceholder()
                 } else if let error, playlists.isEmpty {
-                    ContentUnavailableView("加载失败", systemImage: "exclamationmark.triangle", description: Text(error))
+                    ShUnavailableView(title: "加载失败", systemImage: "exclamationmark.triangle", description: Text(error))
                 } else if playlists.isEmpty && isSearching && !isLoading {
                     BrandedEmpty(icon: "magnifyingglass",
                                  title: "没有找到歌单",
@@ -92,7 +92,7 @@ struct SonglistView: View {
             SonglistDetailView(info: info)
         }
         // Switching source invalidates the tag filter, cached tags and any active search.
-        .onChange(of: selectedSourceRaw) {
+        .shOnChange(of: selectedSourceRaw) {
             selectedTag = .all
             tagGroups = []
             tagsLoadedSource = nil
@@ -368,7 +368,7 @@ struct SonglistDetailView: View {
             } else if isLoading {
                 LoadingPlaceholder()
             } else if let error {
-                ContentUnavailableView("加载失败", systemImage: "exclamationmark.triangle", description: Text(error))
+                ShUnavailableView(title: "加载失败", systemImage: "exclamationmark.triangle", description: Text(error))
             }
         }
         // Stretch to the full safe area so .background paints the whole screen during

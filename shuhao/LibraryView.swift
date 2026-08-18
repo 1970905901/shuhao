@@ -378,7 +378,7 @@ struct PlaylistDetailView: View {
             .onAppear {
                 artwork.extract(from: tracks.first.flatMap { downloads.displayCoverURL(for: $0) })
             }
-            .onChange(of: tracks.first?.id) { _, _ in
+            .shOnChange(of: tracks.first?.id) {
                 artwork.extract(from: tracks.first.flatMap { downloads.displayCoverURL(for: $0) })
             }
             // 收藏/下载弹窗 —— Mac → .popover,iPad/iPhone → .sheet(同 SonglistDetailView)。
@@ -418,7 +418,7 @@ struct PlaylistDetailView: View {
             }
             #endif
         } else {
-            ContentUnavailableView("歌单不存在", systemImage: "trash")
+            ShUnavailableView(title: "歌单不存在", systemImage: "trash")
         }
     }
 

@@ -259,10 +259,10 @@ struct CoverImage<Content: View, Placeholder: View>: View {
             guard CoverImageCache.cached(newURL, maxPixel: maxPixel) == nil else { return }
             Task { _ = await CoverImageCache.load(newURL, maxPixel: maxPixel) }
         }
-        .onChange(of: scenePhase) { _, phase in
+        .shOnChange(of: scenePhase) {
             // 后台期间任务会被取消,回前台时如果还是占位图就再试一次 ——
             // 否则"最小化时切了几首歌,回来封面一直空着"会一直好不了。
-            if phase == .active, image == nil {
+            if scenePhase == .active, image == nil {
                 retryToken &+= 1
             }
         }

@@ -22,8 +22,8 @@ struct ScriptManagerView: View {
     var body: some View {
         List {
             if scripts.scripts.isEmpty {
-                ContentUnavailableView(
-                    "暂无自定义脚本",
+                ShUnavailableView(
+                    title: "暂无自定义脚本",
                     systemImage: "doc.text",
                     description: Text("点击右上角 + 从 URL 或粘贴板导入脚本")
                 )
@@ -147,7 +147,7 @@ struct ScriptManagerView: View {
                         Button("取消") { showImport = false; reset() }
                     }
                 }
-                .onChange(of: importMode) {
+                .shOnChange(of: importMode) {
                     // Each mode takes a different input; don't carry stale text/file across.
                     inputText = ""; pickedFileName = nil; error = nil
                 }

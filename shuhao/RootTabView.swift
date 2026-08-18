@@ -154,27 +154,21 @@ struct RootTabView: View {
     // MARK: - iPhone (compact)
 
     private var phoneTabs: some View {
+        // iOS 16/17/18 统一用经典 TabView(selection:)+tabItem。新的 Tab(...) 标签 API
+        // 是 iOS 18 专属,在 iOS 16 部署目标下无法编译;经典写法三端行为一致。
         TabView(selection: $activeTab) {
-            Tab(ShuhaoSection.search.title,
-                systemImage: ShuhaoSection.search.systemImage,
-                value: ShuhaoSection.search.tag) {
-                NavigationStack(path: $searchPath) { SearchView() }
-            }
-            Tab(ShuhaoSection.leaderboard.title,
-                systemImage: ShuhaoSection.leaderboard.systemImage,
-                value: ShuhaoSection.leaderboard.tag) {
-                NavigationStack(path: $leaderboardPath) { LeaderboardView() }
-            }
-            Tab(ShuhaoSection.songlist.title,
-                systemImage: ShuhaoSection.songlist.systemImage,
-                value: ShuhaoSection.songlist.tag) {
-                NavigationStack(path: $songlistPath) { SonglistView() }
-            }
-            Tab(ShuhaoSection.library.title,
-                systemImage: ShuhaoSection.library.systemImage,
-                value: ShuhaoSection.library.tag) {
-                NavigationStack(path: $libraryPath) { LibraryView() }
-            }
+            NavigationStack(path: $searchPath) { SearchView() }
+                .tabItem { Label(ShuhaoSection.search.title, systemImage: ShuhaoSection.search.systemImage) }
+                .tag(ShuhaoSection.search.tag)
+            NavigationStack(path: $leaderboardPath) { LeaderboardView() }
+                .tabItem { Label(ShuhaoSection.leaderboard.title, systemImage: ShuhaoSection.leaderboard.systemImage) }
+                .tag(ShuhaoSection.leaderboard.tag)
+            NavigationStack(path: $songlistPath) { SonglistView() }
+                .tabItem { Label(ShuhaoSection.songlist.title, systemImage: ShuhaoSection.songlist.systemImage) }
+                .tag(ShuhaoSection.songlist.tag)
+            NavigationStack(path: $libraryPath) { LibraryView() }
+                .tabItem { Label(ShuhaoSection.library.title, systemImage: ShuhaoSection.library.systemImage) }
+                .tag(ShuhaoSection.library.tag)
         }
         // ⚠️ 迷你播放器的挂载方式,改之前务必读完这段 —— 这里来回折腾过很多次。
         //
@@ -208,8 +202,8 @@ struct RootTabView: View {
         // tabbar 未必在首次布局时就在视图树里,出现和切页时各量一次;
         // 量出来的值没变就不会发通知,不会造成额外重建。
         .onAppear { tabBar.refresh() }
-        .onChange(of: activeTab) { _, _ in tabBar.refresh() }
-        .onChange(of: now.track == nil) { _, _ in tabBar.refresh() }
+        .shOnChange(of: activeTab) { tabBar.refresh() }
+        .shOnChange(of: now.track == nil) { tabBar.refresh() }
         // 让位。.contentMargins 通过环境传递给子树里所有滚动视图,包括
         // NavigationStack push 出来的二级页 —— 这正是 safeAreaInset 到不了的地方。
         // 没歌在放时不留白,免得列表底部凭空多一块空隙。

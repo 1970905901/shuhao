@@ -62,7 +62,7 @@ struct IPadPlayerView: View {
             extractColors()
             loadLyrics()
         }
-        .onChange(of: playback.currentTrack?.id) { _, _ in
+        .shOnChange(of: playback.currentTrack?.id) {
             extractColors()
             loadLyrics()
         }

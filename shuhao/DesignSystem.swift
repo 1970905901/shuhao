@@ -225,7 +225,7 @@ struct ChipBar<T: Hashable>: View {
         .bottomContentMargin(0)
         // Subtle haptic on every selection change — the kind of "click" Apple uses on
         // segmented controls. Doesn't fire on the initial value, only on change.
-        .sensoryFeedback(.selection, trigger: selection)
+        .shSensoryFeedback(selection)
     }
 }
 
