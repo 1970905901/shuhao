@@ -525,36 +525,6 @@ final class ArtworkColors: ObservableObject {
     }
 }
 
-// MARK: - Mac 桌面版页内大标题
-//
-// Catalyst 上 UIKit 导航栏的 large title 左贴边+深色色带,跟桌面版其它页面
-// (资料库/歌单广场的 32pt 圆体大标题)完全不搭 — 这些页面在 Mac 上隐藏导航栏
-// 标题,改用这个组件;iPhone/iPad 不用,保持系统导航标题。
-struct MacPageHeader<Trailing: View>: View {
-    let title: String
-    @ViewBuilder var trailing: () -> Trailing
-
-    init(_ title: String, @ViewBuilder trailing: @escaping () -> Trailing) {
-        self.title = title
-        self.trailing = trailing
-    }
-
-    var body: some View {
-        HStack(alignment: .center) {
-            Text(title)
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                .foregroundStyle(DS.Palette.textPrimary)
-            Spacer()
-            trailing()
-        }
-        .padding(.top, 8)
-    }
-}
-
-extension MacPageHeader where Trailing == EmptyView {
-    init(_ title: String) { self.init(title, trailing: { EmptyView() }) }
-}
-
 // MARK: - Background gradient for the player
 
 struct PlayerBackdrop: View {

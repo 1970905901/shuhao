@@ -7,7 +7,6 @@ struct PlayerView: View {
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var sleepTimer: SleepTimer
     @ObservedObject private var downloads = DownloadStore.shared
-    @Environment(\.horizontalSizeClass) private var hSize
     /// Called when the user dismisses the player via the chevron, drag-down, or
     /// left-edge swipe-back. Set by RootTabView's ZStack — we're no longer a
     /// modal, so `@Environment(\.dismiss)` doesn't apply.
@@ -50,13 +49,8 @@ struct PlayerView: View {
     }
 
     var body: some View {
-        // iPad / Mac get a dual-pane layout — cover/controls on the left,
-        // lyrics on the right. Their state is isolated (lives on IPadPlayerView)
-        // so we don't have to share any of this view's @State across sizeClass
-        // changes. The iPhone (compact) implementation continues below.
-        if hSize != .compact {
-            return AnyView(IPadPlayerView(onClose: onClose))
-        }
+        // iPhone-only player. The iPad/Mac dual-pane layout used to live in
+        // IPadPlayerView (now deleted); this app targets iOS / iPhone only.
         return AnyView(compactBody)
     }
 

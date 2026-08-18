@@ -38,8 +38,7 @@ struct ErrorBanner: View {
 }
 
 /// Identifies the four iPhone tabs. `ShuhaoSection.title` is the short Chinese
-/// label used in the tab bar. iPad/Mac do NOT use this — they have their own
-/// navigation models under `shuhao/iPad/` and `shuhao/Mac/`.
+/// label used in the tab bar. This app targets iPhone only.
 enum ShuhaoSection: String, Hashable, CaseIterable, Identifiable {
     case search, leaderboard, songlist, library
     var id: String { rawValue }
@@ -71,16 +70,10 @@ enum ShuhaoSection: String, Hashable, CaseIterable, Identifiable {
     }
 }
 
-/// Root view. Dispatches between three completely independent layouts:
-///
-/// - **iPhone (compact size class)** → `phoneTabs` (existing TabView UI)
-/// - **iPad (regular size class, not Catalyst)** → `IPadRootView` (under `shuhao/iPad/`)
-/// - **Mac Catalyst** → `MacRootView` (under `shuhao/Mac/`)
-///
-/// Per user request these three layouts are NOT trying to share view bodies via
-/// sizeClass branches inside SearchView/LibraryView/etc. Each platform owns its
-/// own visual language. Shared layer = models, stores, playback, design tokens,
-/// resolvers — anything that isn't a screen.
+/// Root view for iPhone. The player (full-screen) and mini player overlay the
+/// classic four-tab `phoneTabs` layout. This app targets iPhone only — the
+/// iPad/Mac layouts previously lived under `shuhao/iPad/` and `shuhao/Mac/`
+/// and have been removed.
 /// 播放错误 / 降级提示横幅。单独成一个视图,把"观察 PlaybackEngine"这件事
 /// 圈在这里 —— 引擎每 0.25 秒发布一次进度,谁观察它谁就每秒重建 4 次。
 private struct PlaybackBanners: View {
@@ -129,32 +122,18 @@ struct RootTabView: View {
     @State private var searchPath = NavigationPath()
     @AppStorage("ui.activeTab") private var activeTab: Int = 0
 
-    /// True when the binary is running under Mac Catalyst. Detected at runtime
-    /// rather than `#if targetEnvironment(macCatalyst)` so a single build can
-    /// branch correctly at the view layer.
-    private var isCatalyst: Bool {
-        ProcessInfo.processInfo.isMacCatalystApp
-    }
-
     var body: some View {
         ZStack(alignment: .bottom) {
-            if isCatalyst {
-                MacRootView(onOpenPlayer: openPlayer)
-            } else if hSize == .compact {
-                phoneTabs
-            } else {
-                IPadRootView(onOpenPlayer: openPlayer)
-            }
+            phoneTabs
             overlays
         }
     }
 
-    /// Show the full PlayerView with the standard spring animation. Passed to
-    /// IPadRootView's bottom bar so tapping the cover/title in the QQ-style
-    /// bar opens the same modal player the iPhone MiniPlayer opens.
+    /// Show the full PlayerView with the standard spring animation. Tapping the
+    /// mini player opens the same modal player.
     private func openPlayer() {
-        // 仅 iPhone 走这套挂载/展开;iPad/Mac 有各自的内容区切换,不挂这里的浮层。
-        guard hSize == .compact, !isCatalyst else { return }
+        // 仅 iPhone 走这套挂载/展开;iPad/Mac 已移除,这里就是唯一的浮层入口。
+        guard hSize == .compact else { return }
         // 挂载(先以 off-screen 状态挂一帧),下一拍再动画展开,避免首帧闪现。
         // 展开由 isOpen 绑定驱动 —— 纯 transform,绝不做快照过渡(否则关闭残影)。
         playerToken += 1
@@ -179,7 +158,7 @@ struct RootTabView: View {
 
     private var phoneTabs: some View {
         // iOS 16/17/18 统一用经典 TabView(selection:)+tabItem。新的 Tab(...) 标签 API
-        // 是 iOS 18 专属,在 iOS 16 部署目标下无法编译;经典写法三端行为一致。
+        // 是 iOS 18 专属,在 iOS 16 部署目标下无法编译;经典写法 iPhone 行为一致。
         TabView(selection: $activeTab) {
             NavigationStack(path: $searchPath) { SearchView() }
                 .tabItem { Label(ShuhaoSection.search.title, systemImage: ShuhaoSection.search.systemImage) }
@@ -246,13 +225,11 @@ struct RootTabView: View {
         // 每秒重建 4 次,配件位里的触摸就被打断了 —— 只让子视图承担这份重建。
         PlaybackBanners(hasTrack: now.track != nil)
 
-        // PlayerView overlay only fires for iPhone (compact). iPad/Mac own
-        // their player as a content-area swap inside IPadRootView so the
-        // persistent IPadBottomBar stays visible like QQ 音乐 桌面端.
-        if playerMounted, hSize == .compact, !isCatalyst {
+        // PlayerView 浮层仅 iPhone 挂载;iPad/Mac 已移除。
+        if playerMounted, hSize == .compact {
             // isOpen 绑定驱动滑入/滑出(纯 transform);onClose 由 PlayerView 在
             // 拖动越阈值时调来,经 dismissPlayer 做滑出 + 延后卸载。
-            PlayerView(isOpen: $playerOpen, onClose: dismissPlayer)
+            PlayerView(onClose: dismissPlayer, isOpen: $playerOpen)
                 .zIndex(10)
         }
     }

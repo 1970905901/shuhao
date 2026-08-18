@@ -7,15 +7,6 @@ struct SettingsView: View {
     /// 进页面时算一次即可 —— 统计磁盘占用要遍历目录,不适合每次刷新都做
     @State private var cacheSize = 0
 
-    // 辅助编译期环境判断
-    private var isMacCatalyst: Bool {
-        #if targetEnvironment(macCatalyst)
-        return true
-        #else
-        return false
-        #endif
-    }
-
     var body: some View {
         Form {
             Section {
@@ -69,21 +60,6 @@ struct SettingsView: View {
                 Text("音源")
             } footer: {
                 Text("脚本失败或未配置音源时,回落到内置直连(仅支持酷我/网易云)。如果你添加的音源能正常解析,可关闭此项严格走脚本")
-            }
-
-            Section {
-                ForEach(homeSourceOptions, id: \.self) { src in
-                    Toggle(isOn: bindingFor(src)) {
-                        HStack(spacing: 8) {
-                            Circle().fill(src.tint).frame(width: 8, height: 8)
-                            Text(src.displayName)
-                        }
-                    }
-                }
-            } header: {
-                Text("发现页信息来源")
-            } footer: {
-                Text("勾选哪些平台的推荐歌单 / 排行榜出现在 iPad 首页。至少保留一个,否则会自动恢复全选")
             }
 
             if !sources.loadedScripts.isEmpty {
@@ -161,8 +137,7 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .brandedSurface()
         .navigationTitle("设置")
-        // 在 Mac Catalyst 桌面端下，inline 模式配合透明背景能展现出最完美的居中标题栏
-        .navigationBarTitleDisplayMode(isMacCatalyst ? .inline : .large)
+        .navigationBarTitleDisplayMode(.large)
         // 之前这里用 onAppear 改全局 UINavigationBar.appearance() 来做透明栏 —— 代理
         // 只影响之后创建的导航栏,本弹窗自己的栏赶不上,滚动后照样变成深色毛玻璃,
         // 还要靠 onDisappear 恢复全局状态。换成 SwiftUI 的 per-view 修饰符,只作用
@@ -189,23 +164,5 @@ struct SettingsView: View {
         case .atmosPlus: return "person.spatialaudio.stereo.fill"
         case .master: return "crown"
         }
-    }
-
-    private var homeSourceOptions: [SourceID] { [.kw, .wy, .kg, .tx] }
-
-    private func bindingFor(_ src: SourceID) -> Binding<Bool> {
-        Binding(
-            get: { settings.homeSources.contains(src) },
-            set: { on in
-                var s = settings.homeSources
-                if on {
-                    s.insert(src)
-                } else {
-                    s.remove(src)
-                    if s.isEmpty { s = Set(homeSourceOptions) }
-                }
-                settings.homeSources = s
-            }
-        )
     }
 }
