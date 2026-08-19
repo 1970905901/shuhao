@@ -13,30 +13,35 @@ enum MiniPlayerMetrics {
     /// (之前硬编码 bottomGap = 52 时,实际视觉间距差不多就是这个数;
     ///  一度设成 10 偏松,回调到 6;实测仍觉得离 tabbar 略远,再收到 2。)
     static let desiredGap: CGFloat = 2
-    /// 量不到真实 tabbar 时的兜底垫高(iPhone 15 Pro 上实测出来的值)
-    static let fallbackBottomGap: CGFloat = 52
+    /// 量不到真实 tabbar 时的兜底垫高。现在走 `.overlay(alignment: .bottom)`,
+    /// 所以兜底是"tabbar 顶边距屏幕底 + desiredGap"的 iPhone 15 Pro 实测值。
+    static let fallbackBottomGap: CGFloat = 85
     /// 列表最后一行与悬浮条之间的呼吸空间。
     /// 刻意不复用 desiredGap —— 那个是"悬浮条和 tabbar 的缝",两码事,
     /// 共用会导致调间距时把列表留白也一起改了。
     static let scrollBreathingRoom: CGFloat = 10
-    /// 列表底部要额外让出的高度,给 .contentMargins 用。
-    /// 只需让开悬浮条本身(tabbar 那段系统已经算进安全区了),再留一点缝。
-    static let scrollBottomMargin: CGFloat = barHeight + scrollBreathingRoom
+    /// 列表底部要额外让出的高度,给 .bottomContentMargin 用。
+    /// 系统已经把 tabbar 那段算进安全区,所以这里只需让开悬浮条本身 + 与 tabbar 的缝隙,
+    /// 再留一点呼吸空间。
+    static let scrollBottomMargin: CGFloat = barHeight + desiredGap + scrollBreathingRoom
 }
 
 /// 量真实 UITabBar 的位置,算出迷你播放器该垫多高。
 ///
-/// 为什么要量:`.safeAreaInset` 把内容放在 TabView 底部安全区之上,而 iOS 26 的
-/// 悬浮 tabbar 是**浮在**这条带上的,不在安全区里 —— 两者会重叠。垫多少完全取决于
-/// tabbar 的实际位置,而它随机型变化(有无 Home 指示条、屏幕尺寸)。
-/// 之前用硬编码 52,是在一台机器上试出来的,换机器就偏。
+/// 之前把迷你播放器挂在 `TabView` 的 `.safeAreaInset` 上,靠底部安全区来定位;
+/// 但实测在带 NavigationStack 的 tab 里行为不一致 —— 排行榜/歌单页会把悬浮条甩到
+/// 屏幕中间,而搜索页正常。现在改回 `.overlay(alignment: .bottom)`,直接把悬浮条
+/// 铺在 TabView 底部,再用这里量出来的 tabbar 顶边到屏幕底距离把它抬到 tabbar
+/// 上方。这样定位不再依赖 `.safeAreaInset` 的隐式行为。
 ///
-/// 公式:垫高 = (tabbar 顶边距屏幕底的距离) − (底部安全区) + 想要的缝隙
-/// 代回实测值:76 − 34 + 10 = 52,和之前试出来的硬编码值吻合。
+/// 公式:悬浮条底边距屏幕底 = tabbar 顶边距屏幕底 + 想要的缝隙
+/// 代回 iPhone 15 Pro:83 + 2 = 85pt,悬浮条正好贴在 tabbar 上方。
 @MainActor
 final class TabBarMetrics: ObservableObject {
     static let shared = TabBarMetrics()
 
+    /// 悬浮条底边应该距屏幕底多远(用于 `.overlay(alignment: .bottom)` 的
+    /// `.padding(.bottom, ...)`)。量不到就用 iPhone 15 Pro 实测的兜底值。
     @Published private(set) var bottomGap: CGFloat = MiniPlayerMetrics.fallbackBottomGap
 
     /// tabbar 未必在首次布局时就进了视图树,量不到就下一轮再试,最多几次。
@@ -44,19 +49,24 @@ final class TabBarMetrics: ObservableObject {
 
     func refresh() {
         retriesLeft = 5
-        attempt()
+        // 稍微延迟一帧,等 TabView/UITabBar 完成最终布局再量,避免在转场/切页
+        // 中间拿到临时 frame,把悬浮条甩到错误位置。
+        DispatchQueue.main.async { [weak self] in self?.attempt() }
     }
 
     private func attempt() {
         guard let window = Self.keyWindow() else { return retry() }
-        guard let bar = Self.findTabBar(in: window), bar.bounds.height > 0 else { return retry() }
+        guard let bar = Self.findTabBar(in: window),
+              bar.bounds.height > 0,
+              bar.window == window else { return retry() }
 
         let inWindow = bar.convert(bar.bounds, to: nil)
         let topFromBottom = window.bounds.height - inWindow.minY
-        let value = topFromBottom - window.safeAreaInsets.bottom + MiniPlayerMetrics.desiredGap
+        let value = topFromBottom + MiniPlayerMetrics.desiredGap
 
-        // 量到离谱的值宁可用兜底,也不要把悬浮条甩到屏幕中间去
-        guard value.isFinite, value > 0, value < 200 else { return }
+        // 量到离谱的值宁可用兜底,也不要把悬浮条甩到屏幕中间去。
+        // 正常 iPhone 在 50~100pt 之间;超过 150 几乎肯定是临时 frame/错误窗口。
+        guard value.isFinite, value > 0, value < 150 else { return retry() }
         if abs(value - bottomGap) > 0.5 { bottomGap = value }
     }
 

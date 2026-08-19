@@ -186,14 +186,16 @@ struct RootTabView: View {
         //                                        识别器 / 把 4Hz 刷新彻底移出 SwiftUI,
         //                                        全都没能修好
         //
-        // 现在用第 4 种:safeAreaInset 挂在 **TabView** 这一层,画出这条悬浮的迷你播放器;
-        // 它就是普通 SwiftUI 视图,触摸走正常路径,没有配件位那个黑盒 —— 点击问题因此解决。
+        // 现在用第 4 种(已修正):把迷你播放器作为 `.overlay(alignment: .bottom)` 铺在
+        // TabView 底部,再用 TabBarMetrics 量出来的 tabbar 顶边到屏幕底距离把它抬到
+        // tabbar 上方。原因:`.safeAreaInset` 在带 NavigationStack 的 tab 上行为不一致,
+        // 排行榜/歌单页会把悬浮条甩到屏幕中间,而搜索页正常;overlay 的定位是显式的,
+        // 不再依赖系统对 safeAreaInset 的隐式布局。
         //
-        // 但它只负责"画",不负责"让位":实测这层 safeAreaInset 不会算进 tab 内容的
-        // 安全区,NavigationStack 里 push 出来的二级页尤其收不到,列表最后一行照样被压住。
-        // 让位由下面的 .contentMargins 单独负责 —— 那个是走环境传递的,能进到 push 页里。
+        // 它只负责"画",不负责"让位":列表让位由下面的 .bottomContentMargin 单独负责 ——
+        // 那个是走环境传递的,能进到 NavigationStack push 出来的二级页里。
         // 两件事拆开做,别指望一个修饰符全包。
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .bottom) {
             // 条件读低频镜像 —— 读 playback 会让整个 phoneTabs 每秒重建 4 次
             if now.track != nil {
                 MiniPlayer(onTap: openPlayer)
