@@ -153,7 +153,7 @@ docs/          功能规格与截图
 
 ### 2. 改成你自己的 Bundle ID
 
-工程里的 `com.heartbeat.shuhao` 系列 ID 绑定在原作者账号下，**你必须换成自己的**，否则签名会失败。在 Xcode 里对三个 target 各改一次（app / Tests / UITests），或全局替换 `com.heartbeat.shuhao` 为你的前缀。
+工程里的 `shuhao.com` 系列 ID 绑定在原作者账号下，**你必须换成自己的**，否则签名会失败。在 Xcode 里对三个 target 各改一次（app / Tests / UITests），或全局替换 `shuhao.com` 为你的前缀。
 
 ### 3. 按需开关 Capability
 

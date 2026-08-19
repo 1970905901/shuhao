@@ -19,7 +19,7 @@ enum WidgetCommand: String, CaseIterable {
     /// nothing is currently in the queue.
     case playRecent
 
-    var darwinName: String { "com.heartbeat.shuhao.command.\(rawValue)" }
+    var darwinName: String { "shuhao.com.command.\(rawValue)" }
 }
 
 @MainActor
