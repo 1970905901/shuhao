@@ -45,7 +45,6 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle("脚本失败时走内置直连 (非官方)", isOn: $settings.enableDirectFallback)
                 NavigationLink {
                     ScriptManagerView()
                 } label: {
@@ -59,7 +58,9 @@ struct SettingsView: View {
             } header: {
                 Text("音源")
             } footer: {
-                Text("脚本失败或未配置音源时,回落到内置直连(仅支持酷我/网易云)。如果你添加的音源能正常解析,可关闭此项严格走脚本")
+                // 用户要求去掉"内置直连"开关。兜底逻辑保留在引擎侧(始终开启,
+                // 脚本失败/未配置时回落内置直连),只是不再给用户一个可关闭的入口。
+                Text("脚本失败或未配置音源时,自动回落到内置直连(仅支持酷我/网易云)")
             }
 
             if !sources.loadedScripts.isEmpty {

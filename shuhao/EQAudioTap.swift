@@ -106,11 +106,16 @@ final class EQAudioTap: ObservableObject {
     /// release" envelope — same logic the old AudioLevelTap had. We can't put
     /// a `@Published` write inside the audio thread (it ManagedObservableObject
     /// touches main-actor) so we sample on the main runloop instead.
+    ///
+    /// ⚠️ 暂时停用:这个 displayLink 在**主线程**每帧 tick(60Hz)做电平平滑,
+    /// 是播放全程常驻的主线程负载之一。而音浪组件(AudioWave)已从播放页删除,
+    /// 现在没有任何消费者读 `level`/`AudioLevel` —— 纯浪费。等以后要恢复音浪
+    /// 可视化时,把下面三行取消注释即可。
     private func startLevelSmoothing() {
-        let link = CADisplayLink(target: DisplayLinkProxy(owner: self),
-                                 selector: #selector(DisplayLinkProxy.tick))
-        link.add(to: .main, forMode: .common)
-        displayLink = link
+        // let link = CADisplayLink(target: DisplayLinkProxy(owner: self),
+        //                          selector: #selector(DisplayLinkProxy.tick))
+        // link.add(to: .main, forMode: .common)
+        // displayLink = link
     }
 
     fileprivate func tick() {
