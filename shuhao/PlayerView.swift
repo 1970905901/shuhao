@@ -99,7 +99,11 @@ struct PlayerView: View {
         // backdrop short AND triggering SwiftUI to recalculate layout mid-
         // transition, which manifested as the cover "jittering" during slide-up.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .preferredColorScheme(.dark)
+        // 刻意不挂 .preferredColorScheme(.dark):本播放器是 RootTabView 同一 UIWindow
+        // 内的全屏子视图,在根视图强制深色会把整窗(含系统 UITabBar)的 trait 带成
+        // 深色 —— 表现为"打开播放器整窗变黑、排行榜底部 tab 变透明",卸载后恢复。
+        // 播放器本身用显式白字 + 不透明黑背景(PlayerBackdrop),移除强制深色后仍是
+        // 暗色外观,却不再污染整窗。内部依赖 scheme 的玻璃材质已改为显式深色填充。
         // Stack the two dismissal offsets — vertical for swipe-down, horizontal
         // for left-edge swipe-back. Either one closes the player.
         .offset(x: isOpen ? swipeBackOffset : 0,
@@ -287,10 +291,13 @@ struct PlayerView: View {
                             Image(systemName: origin.iconName).font(.system(size: 9, weight: .bold))
                             Text(origin.displayLabel).font(.system(size: 10, weight: .semibold))
                         }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(DS.Glass.thin, in: Capsule())
-                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    // 显式深色填充(不依赖 .preferredColorScheme):移除了根视图的强制
+                    // 深色后,DS.Glass.thin 在浅色 scheme 下会偏亮;这里用半透明黑保证
+                    // 在任意 scheme 下都呈暗色胶囊,与原来深色玻璃观感一致。
+                    .background(.black.opacity(0.28), in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
                     }
                 }
             }

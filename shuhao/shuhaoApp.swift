@@ -133,5 +133,16 @@ enum AppNavBarAppearance {
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav
         UINavigationBar.appearance().compactAppearance = nav
+
+        // 底部 tab 栏必须保持不透明。整窗任意位置若被强制 .preferredColorScheme(.dark)
+        // (例如全屏 PlayerView 曾这样),会把系统 UITabBar 一起带进深色,而深色下的 tab
+        // 材质是半透明的,叠在内容上就显得"变透明"(用户反馈:排行榜底部 tab 变透明)。
+        // 钉一个不透明背景可彻底消除该现象,且不影响按钮/选中态 tint。只在启动时设一次,
+        // 不针对单屏 —— 避免像导航栏那样污染后续弹出的 sheet。
+        let tab = UITabBarAppearance()
+        tab.configureWithOpaqueBackground()
+        tab.backgroundColor = UIColor.systemBackground
+        UITabBar.appearance().standardAppearance = tab
+        UITabBar.appearance().scrollEdgeAppearance = tab
     }
 }
