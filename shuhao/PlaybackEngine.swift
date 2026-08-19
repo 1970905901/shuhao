@@ -797,14 +797,20 @@ final class PlaybackEngine: ObservableObject {
 
     /// Write the current queue + position to disk. Throttled to ~once every 5s for the frequent
     /// time-observer calls; pass `force` for one-off events (play/pause/seek/queue edits).
+    ///
+    /// ⚠️ 性能优化:JSON 编码 + 原子写盘从主线程移到后台 utility 队列 —— 播放中
+    /// periodicTimeObserver 每 0.5s 调一次,若在主线程做(编码大队列 + 写盘)会
+    /// 造成持续卡顿(用户反馈"播放中开合动画卡顿")。主线程只做轻量快照。
     private func persistState(force: Bool = false) {
         guard !queue.isEmpty, currentTrack != nil else {
-            try? FileManager.default.removeItem(at: stateURL)
+            let url = stateURL
+            Task.detached(priority: .utility) { try? FileManager.default.removeItem(at: url) }
             return
         }
         let now = Date()
         if !force, now.timeIntervalSince(lastPersist) < 5 { return }
         lastPersist = now
+        // 主线程快照(轻量)
         let state = PersistedPlaybackState(
             queue: queue,
             queueIndex: queueIndex,
@@ -812,8 +818,11 @@ final class PlaybackEngine: ObservableObject {
             loopMode: loopMode.rawValue,
             shuffle: shuffle
         )
-        if let data = try? JSONEncoder().encode(state) {
-            try? data.write(to: stateURL, options: .atomic)
+        // 编码 + 写盘放后台
+        let url = stateURL
+        Task.detached(priority: .utility) {
+            guard let data = try? JSONEncoder().encode(state) else { return }
+            try? data.write(to: url, options: .atomic)
         }
     }
 

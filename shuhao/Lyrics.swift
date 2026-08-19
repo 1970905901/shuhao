@@ -95,11 +95,29 @@ nonisolated enum LRCParser {
 @MainActor
 final class LyricsFetcher {
     static let shared = LyricsFetcher()
+    /// ⚠️ 性能:带上限的歌词缓存。Dictionary 本身不限,缓存几百首歌 × 每首几百行
+    /// 会无界增长(尤其用户听歌量大时);到达上限后清掉最旧的 1/4,保证长期运行
+    /// 内存稳定。上限 500 首 ≈ 每首 ~50KB 歌词文本 = ~25MB 量级,合理。
     private var cache: [String: [LyricLine]] = [:]
+    private let cacheLimit = 500
 
     /// 已下载歌曲的本地文件里嵌入了 LRC(下载时写入的)。AppServices 注入,
     /// 返回嵌入的原始 LRC 文本;非下载歌曲/读不到返回 nil。
     var localLyricsProvider: ((Track) async -> String?)?
+
+    /// 写入缓存并施加数量上限:超过 cacheLimit 时清掉最旧的一半,
+    /// 防止无界增长(Dictionary 写入是主线程,超限后批量清理避免每次 insert 都检查)。
+    private func store(_ lines: [LyricLine], for id: String) {
+        if cache.count >= cacheLimit, cache[id] == nil {
+            // 清最旧的 1/2:Dictionary 无序,按插入顺序不可靠,直接保留一半即可。
+            // 代价:偶尔清掉仍需要的条目,下次 fetch 重新获取 —— 可接受的权衡。
+            let dropCount = cache.count / 2
+            for key in cache.keys.prefix(dropCount) {
+                cache.removeValue(forKey: key)
+            }
+        }
+        cache[id] = lines
+    }
 
     func fetch(for track: Track, sources: SourceManager) async -> [LyricLine] {
         if let hit = cache[track.id] {
@@ -111,27 +129,27 @@ final class LyricsFetcher {
             let lines = Self.mergeSameTimeTranslations(LRCParser.parse(raw))
             if !lines.isEmpty {
                 print("[Lyrics] from embedded file: \(lines.count) lines for \(track.id)")
-                cache[track.id] = lines
+                store(lines, for: track.id)
                 return lines
             }
         }
         // Try user script first
         if let lines = await tryScript(track: track, sources: sources) {
             print("[Lyrics] from script: \(lines.count) lines, first 3: \(lines.prefix(3).map { $0.text })")
-            cache[track.id] = lines
+            store(lines, for: track.id)
             return lines
         }
         // Fallback by source
         if let lines = await tryFallback(track: track) {
             print("[Lyrics] from fallback: \(lines.count) lines, first 3: \(lines.prefix(3).map { $0.text })")
-            cache[track.id] = lines
+            store(lines, for: track.id)
             return lines
         }
         // Cross-source: borrow lyrics from the same song on another platform (same name+singer,
         // duration within 10s). Cached under the *original* track id so it sticks next time.
         if let lines = await tryOtherSources(track: track, sources: sources) {
             print("[Lyrics] from other-source: \(lines.count) lines, first 3: \(lines.prefix(3).map { $0.text })")
-            cache[track.id] = lines
+            store(lines, for: track.id)
             return lines
         }
         print("[Lyrics] no lyric for \(track.id)")

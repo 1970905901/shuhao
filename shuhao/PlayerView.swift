@@ -760,11 +760,21 @@ struct LyricsScroll: View {
 
 /// Single lyric row. Extracted from the ForEach body because Swift's type checker
 /// times out on the inline conditional `AnyShapeStyle(...)` ternary.
-private struct LyricRow: View {
+///
+/// ⚠️ 性能:Equatable —— 歌词页 2Hz 更新 currentTime 时,`ForEach` 会对整表
+/// 重新 diff;若行不是 Equatable,每行 body 都会重算(isCurrent/字体/颜色)。
+/// Equatable 后 SwiftUI 只在 isCurrent 真正变化的那一行重建,其余行复用,
+/// 长歌词滚动不掉帧。
+private struct LyricRow: View, Equatable {
     let line: LyricLine
     let isCurrent: Bool
     let activeBinding: Int?
     let onTap: (Double) -> Void
+
+    /// onTap 是闭包,不参与相等性 —— 行内容只由 line + isCurrent 决定。
+    static func == (l: LyricRow, r: LyricRow) -> Bool {
+        l.line == r.line && l.isCurrent == r.isCurrent
+    }
 
     private var foreground: AnyShapeStyle {
         isCurrent
