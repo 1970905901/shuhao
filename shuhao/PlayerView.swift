@@ -608,7 +608,7 @@ private final class VinylRecordView: UIView {
                         .frame(width: 76, height: 76)
                         .shadow(color: artwork.primary.opacity(0.55), radius: 22, y: 8)
                         .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
-                    if now.isBuffering {
+                    if engine?.isBuffering ?? false {
                         UIKitSpinner(style: .medium, color: UIColor(DS.Palette.brandStart))
                     } else {
                         // Top→bottom burgundy → brass mini-gradient gives the
