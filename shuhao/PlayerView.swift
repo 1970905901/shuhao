@@ -38,8 +38,10 @@ struct PlayerView: View {
     /// 左缘向右滑的横向位移。跟随手指,松开后要么飞向右侧关闭,要么弹回原位。
     @State private var swipeBackOffset: CGFloat = 0
 
-    /// 进场弹簧(右缘滑入),与 RootTabView.openPlayer 手感一致。
-    static let playerSpring = Animation.spring(response: 0.42, dampingFraction: 0.82)
+    /// 进场动画(右缘滑入):用短促的 easeOut 而不是弹簧 —— 整屏重视图上弹簧的
+    /// 逐帧非线性插值 + 回弹在"点开瞬间"最容易卡顿;easeOut(0.3) 平滑、帧数少、
+    /// 无过冲,打开更跟手。
+    static let playerSpring = Animation.easeOut(duration: 0.3)
     /// 关闭动画(右缘滑出):用短促的 easeOut 而不是弹簧 —— 弹簧在整屏重视图上
     /// 每帧非线性插值 + 回弹,松手瞬间尤其容易卡;easeOut 0.25s 干脆平滑无过冲。
     static let playerCloseSpring = Animation.easeOut(duration: 0.25)
@@ -356,16 +358,19 @@ struct PlayerView: View {
             Spacer()
             // Album art + title/subtitle wrapped in one id'd container so SwiftUI
             // crossfades the whole "track identity" block when the song changes,
-            // instead of hard-cutting on each property update. Scale on the way in
-            // gives a tiny "rise" — feels like the new song settled into place.
+            // instead of hard-cutting on each property update.
             ZStack {
                 if let track = now.track {
                     VStack(spacing: 0) {
-                        Artwork(url: downloads.displayCoverURL(for: track), size: 320, radius: DS.Radius.xlarge)
-                            .elevation(DS.Elevation.e3(artwork.primary))
-                            .shadow(color: .black.opacity(0.35), radius: 14, y: 8)
-                            .scaleEffect(now.isPlaying ? 1.0 : 0.92)
-                            .animation(DS.Motion.emphasis, value: now.isPlaying)
+                        // 网易云黑胶唱片样式:整张唱片(碟身 + 中心封面)播放时匀速
+                        // 旋转,暂停/缓冲时冻结在当前角度。
+                        VinylRecord(
+                            coverURL: downloads.displayCoverURL(for: track),
+                            spinning: now.isPlaying && !now.isBuffering,
+                            fallback: artwork.primary
+                        )
+                        .frame(width: 320, height: 320)
+                        .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
 
                         VStack(spacing: 6) {
                             Text(track.name)
@@ -414,14 +419,79 @@ struct PlayerView: View {
             }
             .animation(DS.Motion.standard, value: now.track?.id)
 
-            AudioWave(active: now.isPlaying && !now.isBuffering)
-                .frame(height: 68)
-                .padding(.horizontal, 4)
-                .padding(.top, DS.Spacing.l)
             Spacer()
         }
         .offset(y: -18)
     }
+
+// MARK: - 网易云黑胶唱片
+
+/// 网易云黑胶唱片样式的封面:整张唱片(黑色碟身 + 中心圆形封面 label)播放时
+/// 匀速旋转,暂停/缓冲时冻结在当前角度。
+///
+/// 旋转用 TimelineView(.animation) 驱动而不是 repeatForever 弹簧:后者在"暂停
+/// → 恢复"时要么从 0 重转、要么往回倒转,TimelineView 用时间戳连续算角度,
+/// paused 时停更 → 唱片就停在当前角度,恢复后继续转,手感最接近真黑胶。
+private struct VinylRecord: View {
+    let coverURL: String?
+    /// true = 播放中,唱片旋转;false = 暂停/缓冲,冻结。
+    let spinning: Bool
+    /// 封面占位渐变用的兜底色(取自封面主色调)。
+    let fallback: Color
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !spinning)) { context in
+            // 30°/s → 12 秒一圈,观感接近网易云的转速
+            let angle = (context.date.timeIntervalSinceReferenceDate * 30.0)
+                .truncatingRemainder(dividingBy: 360.0)
+            ZStack {
+                // 黑胶碟身:径向渐变做出唱片质感 + 几圈同心唱片纹
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(white: 0.16), Color(white: 0.06), Color(white: 0.02)],
+                            center: .center, startRadius: 6, endRadius: 160
+                        )
+                    )
+                    .overlay(
+                        ZStack {
+                            ForEach([40, 68, 96, 124], id: \.self) { d in
+                                Circle()
+                                    .strokeBorder(Color.white.opacity(0.05), lineWidth: 0.5)
+                                    .frame(width: CGFloat(d) * 2, height: CGFloat(d) * 2)
+                            }
+                        }
+                    )
+
+                // 中心 label:圆形封面(随唱片一起转)
+                CoverImage(url: coverURL, maxPixel: 220) { img in
+                    img.resizable().scaledToFill()
+                } placeholder: {
+                    LinearGradient(
+                        colors: [fallback, fallback.opacity(0.55)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.system(size: 44, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                    )
+                }
+                .frame(width: 172, height: 172)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 1.5))
+
+                // 中心轴孔
+                Circle()
+                    .fill(Color(white: 0.08))
+                    .frame(width: 12, height: 12)
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5))
+            }
+            .frame(width: 320, height: 320)
+            .rotationEffect(.degrees(angle))
+        }
+    }
+}
 
     // MARK: - Lyrics page
 
