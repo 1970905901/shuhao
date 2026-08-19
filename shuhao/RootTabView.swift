@@ -40,7 +40,7 @@ struct ErrorBanner: View {
 /// Identifies the four iPhone tabs. `ShuhaoSection.title` is the short Chinese
 /// label used in the tab bar. This app targets iPhone only.
 enum ShuhaoSection: String, Hashable, CaseIterable, Identifiable {
-    case search, leaderboard, songlist, library
+    case search, leaderboard, songlist, library, settings
     var id: String { rawValue }
 
     var title: String {
@@ -49,6 +49,7 @@ enum ShuhaoSection: String, Hashable, CaseIterable, Identifiable {
         case .leaderboard: return "排行榜"
         case .songlist:    return "歌单"
         case .library:     return "我的"
+        case .settings:    return "设置"
         }
     }
     var systemImage: String {
@@ -57,12 +58,13 @@ enum ShuhaoSection: String, Hashable, CaseIterable, Identifiable {
         case .leaderboard: return "chart.bar.fill"
         case .songlist:    return "rectangle.stack.fill"
         case .library:     return "music.note.list"
+        case .settings:    return "gearshape.fill"
         }
     }
     /// Legacy integer tag — keeps `@AppStorage("ui.activeTab")` portable.
     var tag: Int {
         switch self {
-        case .search: 0; case .leaderboard: 1; case .songlist: 2; case .library: 3
+        case .search: 0; case .leaderboard: 1; case .songlist: 2; case .library: 3; case .settings: 4
         }
     }
     static func from(tag: Int) -> ShuhaoSection {
@@ -189,6 +191,12 @@ struct RootTabView: View {
             NavigationStack(path: $libraryPath) { LibraryView() }
                 .tabItem { Label(ShuhaoSection.library.title, systemImage: ShuhaoSection.library.systemImage) }
                 .tag(ShuhaoSection.library.tag)
+            // 设置从 Library 顶栏搬到独立 tab,跟其它四个 tab 同一行。
+            // SettingsView 内部已有 .navigationTitle + NavigationLink 到 ScriptManager,
+            // 这里再包一层 NavigationStack 让它作为根 tab 也能正常 push。
+            NavigationStack { SettingsView() }
+                .tabItem { Label(ShuhaoSection.settings.title, systemImage: ShuhaoSection.settings.systemImage) }
+                .tag(ShuhaoSection.settings.tag)
         }
         // ⚠️ 迷你播放器的挂载方式,改之前务必读完这段 —— 这里来回折腾过很多次。
         //

@@ -76,15 +76,38 @@ struct LibraryView: View {
                     }
                     .padding(.horizontal, DS.Spacing.l)
                 } header: {
-                    sectionHeader("歌单", subtitle: "\(playlists.playlists.count) 个")
-                        .padding(.horizontal, DS.Spacing.l)
+                    HStack(alignment: .center, spacing: 8) {
+                        Text("歌单").font(DS.Typography.sectionTitle)
+                        Text("\(playlists.playlists.count) 个")
+                            .font(.caption).foregroundColor(.secondary)
+                        Spacer()
+                        // 原来顶栏的 + 菜单: 创建 / 导入歌单 / 本地导入 —— 全部歌单
+                        // 相关的入口,搬到"歌单"行最右边最合理,跟 section 语义对齐。
+                        Menu {
+                            Button { showCreate = true } label: {
+                                Label("创建歌单", systemImage: "plus.square.on.square")
+                            }
+                            Button { showSonglistImport = true } label: {
+                                Label("导入歌单", systemImage: "link.badge.plus")
+                            }
+                            Button { showImport = true } label: {
+                                Label("本地导入", systemImage: "folder.badge.plus")
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(DS.Palette.brandGradient)
+                        }
+                    }
+                    .padding(.horizontal, DS.Spacing.l)
                 }
             }
             .padding(.vertical, DS.Spacing.m)
         }
         .brandedSurface()
         .navigationTitle("我的")
-        .navigationBarTitleDisplayMode(.large)
+        // 跟搜索/排行榜/歌单一致:标题改 inline,内容贴近状态栏。
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: UUID.self) { id in
             if let p = playlists.playlists.first(where: { $0.id == id }) {
                 PlaylistDetailView(playlistID: p.id)
@@ -98,32 +121,8 @@ struct LibraryView: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Menu {
-                    Button { showCreate = true } label: {
-                        Label("创建歌单", systemImage: "plus.square.on.square")
-                    }
-                    Button { showSonglistImport = true } label: {
-                        Label("导入歌单", systemImage: "link.badge.plus")
-                    }
-                    Button { showImport = true } label: {
-                        Label("本地导入", systemImage: "folder.badge.plus")
-                    }
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(DS.Palette.brandGradient)
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink { SettingsView() } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(DS.Palette.brandGradient)
-                }
-            }
-        }
+        // 原来顶栏的 + 菜单(创建/导入歌单/本地导入)搬到下方"歌单" section 头的最右
+        // 边;齿轮设置按钮挪到独立底部 tab(见 RootTabView 的 .settings tab)。
         .alert("新建歌单", isPresented: $showCreate) {
             TextField("名称", text: $newName)
             Button("取消", role: .cancel) { newName = "" }

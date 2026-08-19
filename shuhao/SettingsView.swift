@@ -137,7 +137,8 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .brandedSurface()
         .navigationTitle("设置")
-        .navigationBarTitleDisplayMode(.large)
+        // 现在设置是底部 tab,跟其它四个 tab 同一行,标题统一 inline。
+        .navigationBarTitleDisplayMode(.inline)
         // 之前这里用 onAppear 改全局 UINavigationBar.appearance() 来做透明栏 —— 代理
         // 只影响之后创建的导航栏,本弹窗自己的栏赶不上,滚动后照样变成深色毛玻璃,
         // 还要靠 onDisappear 恢复全局状态。换成 SwiftUI 的 per-view 修饰符,只作用
