@@ -6,10 +6,6 @@
 	<string>shuhao music</string>
 	<key>LSHasLocalizedDisplayName</key>
 	<true/>
-	<key>NSUserActivityTypes</key>
-	<array>
-		<string>INPlayMediaIntent</string>
-	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

@@ -33,18 +33,6 @@ struct SiriNextTrackIntent: AudioPlaybackIntent {
     }
 }
 
-struct SiriPreviousTrackIntent: AudioPlaybackIntent {
-    static var title: LocalizedStringResource = "上一首"
-    static var description = IntentDescription("回到播放队列的上一首歌")
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        await AppServices.shared.bootstrapIfNeeded()
-        AppServices.shared.playback?.previous()
-        return .result()
-    }
-}
-
 struct SiriResumeIntent: AudioPlaybackIntent {
     static var title: LocalizedStringResource = "继续播放"
     static var description = IntentDescription("接着上次的进度继续听")

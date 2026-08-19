@@ -84,15 +84,6 @@ struct SharedNowPlaying: Codable, Hashable {
     /// reload budget).
     var currentLyric: String?
     var updatedAt: Date
-
-    /// What the widget should display as "current time", projected from the
-    /// last snapshot using wall-clock delta if the player is currently playing.
-    func projectedElapsed(at now: Date = Date()) -> Double {
-        if isPlaying {
-            return min(duration, elapsed + now.timeIntervalSince(updatedAt))
-        }
-        return elapsed
-    }
 }
 
 enum SharedNowPlayingStore {

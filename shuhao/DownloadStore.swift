@@ -223,12 +223,6 @@ final class DownloadStore: ObservableObject {
         return f
     }
 
-    func renameFolder(_ id: UUID, name: String) {
-        guard let i = folders.firstIndex(where: { $0.id == id }) else { return }
-        folders[i].name = name
-        save()
-    }
-
     /// Delete a folder and every download inside it (files + records).
     func deleteFolder(_ id: UUID) {
         guard let i = folders.firstIndex(where: { $0.id == id }) else { return }

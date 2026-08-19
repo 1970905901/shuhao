@@ -445,18 +445,6 @@ struct BrandedEmpty: View {
     }
 }
 
-// MARK: - Pretty card for grid items
-
-struct GridCard<Content: View>: View {
-    let content: () -> Content
-    var body: some View {
-        content()
-            .padding(DS.Spacing.m)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.large, style: .continuous))
-    }
-}
-
 // MARK: - Color extraction from album art for player background
 
 @MainActor

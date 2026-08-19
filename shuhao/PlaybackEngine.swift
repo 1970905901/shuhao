@@ -278,19 +278,6 @@ final class PlaybackEngine: ObservableObject {
         }
     }
 
-    func playDirectURL(_ url: URL, asTrack: Track) {
-        currentTrack = asTrack
-        currentOrigin = .localFile
-        currentQuality = nil
-        // This path skips loadAndPlayCurrent, so reset per-track recovery state here, otherwise
-        // a stale `triedHiRes` from the previous song would block the libFLAC fallback.
-        qualityCap = nil
-        triedQualities = []
-        triedHiRes = false
-        cascadeNotice = nil
-        startPlayback(url: url)
-    }
-
     func play(track: Track, in newQueue: [Track]? = nil, startIndex: Int? = nil) {
         print("[PlaybackEngine] play(\(track.source.rawValue)_\(track.songmid) \(track.name)) queue.count=\(newQueue?.count ?? queue.count) currentQueueSize=\(queue.count)")
         if let nq = newQueue {

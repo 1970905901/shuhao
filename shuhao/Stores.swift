@@ -202,13 +202,6 @@ final class PlaylistStore: ObservableObject {
         cleanTrackBank()
     }
 
-    func renamePlaylist(_ id: UUID, name: String) {
-        guard let idx = playlists.firstIndex(where: { $0.id == id }) else { return }
-        playlists[idx].name = name
-        playlists[idx].updatedAt = Date()
-        save()
-    }
-
     private func cleanTrackBank() {
         let keep = Set(playlists.flatMap { $0.trackIDs })
         trackBank = trackBank.filter { keep.contains($0.key) }

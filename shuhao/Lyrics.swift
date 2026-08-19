@@ -210,8 +210,4 @@ final class LyricsFetcher {
     }
 
     func clear() { cache.removeAll() }
-
-    func injectCache(_ lines: [LyricLine], for trackID: String) {
-        cache[trackID] = lines
-    }
 }
