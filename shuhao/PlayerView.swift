@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import Combine
 
 struct PlayerView: View {
     /// 刻意不观察 PlaybackEngine:它的 currentTime 每 0.25 秒发布一次,一旦
@@ -412,146 +411,88 @@ struct PlayerView: View {
 /// 网易云黑胶唱片样式的封面:整张唱片(黑色碟身 + 中心圆形封面 label)播放时
 /// 匀速旋转,暂停/缓冲时冻结在当前角度。
 ///
-/// ⚠️ 旋转走 UIKit 的 CALayer CABasicAnimation(GPU 驱动),**不经过 SwiftUI 每帧
-/// 重绘**。之前用 TimelineView(.animation) 驱动,30fps 的闭包重建把封面/圆形视图
-/// 整棵重画一遍,播放中肉眼可见地卡,还拖累进出场动画 —— 这也是"黑胶旋转卡顿"
-/// 的直接根源。现在旋转、暂停冻结全在图层层完成,主线程零开销。
-private struct VinylRecord: UIViewRepresentable {
+/// ⚠️ 旋转用 TimelineView(.animation) 的时间戳连续算角度 + rotationEffect,
+/// 不用 CALayer CABasicAnimation:后者(曾在 aa61da0 引入)在暂停时执行
+/// `layer.setValue(_, forKeyPath: "transform.rotation.z")` 写入 model layer 的
+/// transform —— 暂停/播放反复切换时与 SwiftUI 布局重算叠加,导致黑胶视觉尺寸
+/// 跳变(用户报告的"暂停/播放循环变大变小")。TimelineView 用时间戳算角度,
+/// paused 时停更 → 唱片停在当前角度,恢复后继续转,手感最接近真黑胶;
+/// 且完全不触碰 layer transform,从根源消除缩放抖动。
+private struct VinylRecord: View {
     let coverURL: String?
     /// true = 播放中,唱片旋转;false = 暂停/缓冲,冻结。
     let spinning: Bool
     /// 封面占位渐变用的兜底色(取自封面主色调)。
     let fallback: Color
 
-    func makeUIView(context: Context) -> VinylRecordView {
-        VinylRecordView(fallback: UIColor(fallback))
-    }
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !spinning)) { context in
+            // 30°/s → 12 秒一圈,观感接近网易云的转速
+            let angle = (context.date.timeIntervalSinceReferenceDate * 30.0)
+                .truncatingRemainder(dividingBy: 360.0)
+            ZStack {
+                // 黑胶碟身:径向渐变做出唱片质感 + 几圈同心唱片纹
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(white: 0.16), Color(white: 0.06), Color(white: 0.02)],
+                            center: .center, startRadius: 6, endRadius: 160
+                        )
+                    )
+                    .overlay(
+                        ZStack {
+                            ForEach([40, 68, 96, 124], id: \.self) { d in
+                                Circle()
+                                    .strokeBorder(Color.white.opacity(0.05), lineWidth: 0.5)
+                                    .frame(width: CGFloat(d) * 2, height: CGFloat(d) * 2)
+                            }
+                        }
+                    )
 
-    func updateUIView(_ view: VinylRecordView, context: Context) {
-        view.setSpinning(spinning)
-        view.setCover(url: coverURL)
+                // 中心 label:圆形封面(随唱片一起转)
+                VinylCover(url: coverURL, fallback: fallback)
+                    .frame(width: 172, height: 172)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 1.5))
+
+                // 中心轴孔
+                Circle()
+                    .fill(Color(white: 0.08))
+                    .frame(width: 12, height: 12)
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5))
+            }
+            .frame(width: 320, height: 320)
+            .rotationEffect(.degrees(angle))
+        }
     }
 }
 
-private final class VinylRecordView: UIView {
-    private let fallback: UIColor
-    private let coverView = UIImageView()
-    private let discLayer = CAShapeLayer()
-    private var ringLayers: [CAShapeLayer] = []
-    private let spindleLayer = CAShapeLayer()
-    private var spinning = false
-    /// 暂停时记录的角度,恢复时从这里接着转。
-    private var currentAngle: Double = 0
-    private var currentURL: String?
-    private var bag = Set<AnyCancellable>()
+/// 黑胶中心封面图:优先走磁盘缓存(CoverImageCache,异步加载完成经
+/// CoverCacheSignal 通知刷新),未命中时显示兜底色渐变 + 音符占位。
+private struct VinylCover: View {
+    let url: String?
+    let fallback: Color
 
-    init(fallback: UIColor) {
-        self.fallback = fallback
-        super.init(frame: .zero)
-        backgroundColor = .clear
-        isUserInteractionEnabled = false
-
-        // 碟身
-        discLayer.fillColor = UIColor(white: 0.06, alpha: 1).cgColor
-        layer.addSublayer(discLayer)
-        // 唱片纹
-        for d in [0.25, 0.42, 0.6, 0.78] {
-            let ring = CAShapeLayer()
-            ring.strokeColor = UIColor.white.withAlphaComponent(0.06).cgColor
-            ring.fillColor = nil
-            ring.lineWidth = 0.5
-            layer.addSublayer(ring)
-            ringLayers.append(ring)
-        }
-        // 中心封面
-        coverView.contentMode = .scaleAspectFill
-        coverView.clipsToBounds = true
-        addSubview(coverView)
-        // 中心轴孔
-        spindleLayer.fillColor = UIColor(white: 0.08, alpha: 1).cgColor
-        layer.addSublayer(spindleLayer)
-
-        // 封面下载完成(CoverCacheSignal.bump)时从缓存刷新封面
-        CoverCacheSignal.shared.$version
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.refreshCover() }
-            .store(in: &bag)
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let w = bounds.width, h = bounds.height
-        let r = min(w, h) / 2
-        let c = CGPoint(x: w / 2, y: h / 2)
-        discLayer.path = UIBezierPath(ovalIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)).cgPath
-        for (i, ring) in ringLayers.enumerated() {
-            let d = r * [0.25, 0.42, 0.6, 0.78][i]
-            ring.path = UIBezierPath(ovalIn: CGRect(x: c.x - d, y: c.y - d, width: d * 2, height: d * 2)).cgPath
-        }
-        // 中心封面 label 半径 r * 0.55
-        let labelR = r * 0.55
-        coverView.frame = CGRect(x: c.x - labelR, y: c.y - labelR, width: labelR * 2, height: labelR * 2)
-        coverView.layer.cornerRadius = labelR
-        // 中心轴孔
-        let spinR = max(r * 0.04, 3)
-        spindleLayer.path = UIBezierPath(ovalIn: CGRect(x: c.x - spinR, y: c.y - spinR, width: spinR * 2, height: spinR * 2)).cgPath
-    }
-
-    func setSpinning(_ on: Bool) {
-        guard on != spinning else { return }
-        spinning = on
-        if on {
-            startSpin()
-        } else {
-            freezeSpin()
-        }
-    }
-
-    /// ⚠️ 播放器关闭再打开时,视图重新挂上窗口,但 CABasicAnimation 已随图层
-    /// 离开渲染树而失效 —— 之前 spinning 仍是 true,`setSpinning` 的 guard 直接
-    /// return,动画永远不重挂,表现为"黑胶停转"。
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        if window != nil, spinning, layer.animation(forKey: "spin") == nil {
-            startSpin()
-        }
-    }
-
-    /// 从当前角度继续转;每圈结束(角度+2π)回到起点,+2π 整圈跳变不可见,无缝。
-    private func startSpin() {
-        let anim = CABasicAnimation(keyPath: "transform.rotation.z")
-        anim.fromValue = currentAngle
-        anim.toValue = currentAngle + 2 * .pi
-        anim.duration = 12
-        anim.repeatCount = .infinity
-        layer.add(anim, forKey: "spin")
-    }
-
-    /// 冻结在当前角度:把 presentation 层角度写回模型层再移除动画
-    private func freezeSpin() {
-        currentAngle = Double(layer.presentation()?.value(forKeyPath: "transform.rotation.z") as? CGFloat ?? 0)
-        layer.removeAnimation(forKey: "spin")
-        layer.setValue(currentAngle, forKeyPath: "transform.rotation.z")
-    }
-
-    func setCover(url: String?) {
-        currentURL = url
-        if let url, let img = CoverImageCache.cached(url, maxPixel: 220) {
-            coverView.image = img
-        } else {
-            coverView.image = nil
-            coverView.backgroundColor = fallback
-            if let url {
-                Task { _ = await CoverImageCache.load(url, maxPixel: 220) }
+    var body: some View {
+        Group {
+            if let url, let img = CoverImageCache.cached(url, maxPixel: 220) {
+                Image(uiImage: img).resizable().scaledToFill()
+            } else {
+                LinearGradient(
+                    colors: [fallback, fallback.opacity(0.55)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+                .overlay(
+                    Image(systemName: "music.note")
+                        .font(.system(size: 44, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                )
             }
         }
-    }
-
-    private func refreshCover() {
-        guard let url = currentURL, let img = CoverImageCache.cached(url, maxPixel: 220) else { return }
-        coverView.image = img
+        .onAppear {
+            guard let url, CoverImageCache.cached(url, maxPixel: 220) == nil else { return }
+            Task { _ = await CoverImageCache.load(url, maxPixel: 220) }
+        }
     }
 }
 
