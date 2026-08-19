@@ -2,7 +2,12 @@ import SwiftUI
 import UIKit
 
 struct PlayerView: View {
-    @EnvironmentObject var playback: PlaybackEngine
+    /// 刻意不观察 PlaybackEngine:它的 currentTime 每 0.25 秒发布一次,一旦
+    /// @EnvironmentObject 挂上,body 就每秒重建 4 次,播放中 / 关闭时都掉帧。
+    /// 取指令走 AppServices.shared.playback(运行时取值,非观察);
+    /// 展示字段走 NowPlayingBar 的低频镜像(只在换歌 / 播放状态变化时更新)。
+    private var engine: PlaybackEngine? { AppServices.shared.playback }
+    @ObservedObject private var now = NowPlayingBar.shared
     @EnvironmentObject var sources: SourceManager
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var sleepTimer: SleepTimer
@@ -13,8 +18,6 @@ struct PlayerView: View {
     let onClose: () -> Void
     @StateObject private var artwork = ArtworkColors()
     @State private var showSleepSheet = false
-    @State private var seekValue: Double = 0
-    @State private var isSeeking: Bool = false
     @State private var page: Int = 0  // 0 = cover, 1 = lyrics
     @State private var showQueue = false
     @State private var lyrics: [LyricLine] = []
@@ -45,13 +48,18 @@ struct PlayerView: View {
 
     /// Shared selector — see `PlaybackCycleMode` in PlaybackEngine.swift.
     private var cycleMode: PlaybackCycleMode {
-        PlaybackCycleMode.current(shuffle: playback.shuffle, loop: playback.loopMode)
+        PlaybackCycleMode.current(shuffle: now.shuffle, loop: now.loopMode)
     }
 
     var body: some View {
         // iPhone-only player. The iPad/Mac dual-pane layout used to live in
         // IPadPlayerView (now deleted); this app targets iOS / iPhone only.
-        return AnyView(compactBody)
+        //
+        // 不包 AnyView:AnyView 会抹掉底层视图的具名类型,SwiftUI 无法做差分,
+        // 每个 0.25 秒的 currentTime 更新都会把整棵子树拆掉重建 —— 正好和开场
+        // 的弹簧滑入动画抢主线程,表现为"从迷你播放器点开时严重掉帧"。去掉后
+        // SwiftUI 能复用不变的子视图(封面/背景/控制条),只更新真正变化的叶子。
+        compactBody
     }
 
     private var compactBody: some View {
@@ -145,7 +153,7 @@ struct PlayerView: View {
         .shOnChange(of: isOpen) {
             if !isOpen { dragOffset = 0; swipeBackOffset = 0 }
         }
-        .shOnChange(of: playback.currentTrack?.id) { sync() }
+        .shOnChange(of: now.track?.id) { sync() }
         // All sheets below are forced back to the system's real color scheme +
         // re-injected with the brand tint. Both default-inherit through SwiftUI
         // ancestors, but `.preferredColorScheme` re-roots the sheet so we lose
@@ -183,11 +191,11 @@ struct PlayerView: View {
         // MV uses fullScreenCover (not sheet) — video benefits from edge-to-edge,
         // and the user explicitly opted into "watch a video", not a peek.
         .fullScreenCover(item: $mvInfo) { info in
-            if let track = playback.currentTrack {
+            if let track = now.track, let e = engine {
                 // fullScreenCover 启的是新展示上下文,@EnvironmentObject 不会自动
                 // 跨边界继承(Catalyst 上必崩),手动把 MvPlayerView 用到的注回去。
                 MvPlayerView(info: info, track: track, onClose: { mvInfo = nil })
-                    .environmentObject(playback)
+                    .environmentObject(e)
             }
         }
         .overlay(alignment: .top) {
@@ -208,7 +216,7 @@ struct PlayerView: View {
     /// Triggered from the ⋯ menu's "播放 MV" item. Hits the per-source MV
     /// endpoint; on success opens MvPlayerView, otherwise flashes a toast.
     private func fetchMv() {
-        guard let track = playback.currentTrack else { return }
+        guard let track = now.track else { return }
         loadingMv = true
         showFlash("正在获取 MV…")
         Task {
@@ -238,9 +246,9 @@ struct PlayerView: View {
     }
 
     private func sync() {
-        artwork.extract(from: playback.currentTrack.flatMap { downloads.displayCoverURL(for: $0) })
+        artwork.extract(from: now.track.flatMap { downloads.displayCoverURL(for: $0) })
         lyrics = []
-        guard let track = playback.currentTrack else { return }
+        guard let track = now.track else { return }
         loadingLyrics = true
         Task {
             let lines = await LyricsFetcher.shared.fetch(for: track, sources: sources)
@@ -261,10 +269,10 @@ struct PlayerView: View {
         ZStack {
             if settings.showDebugNotices {
                 HStack(spacing: 5) {
-                    Text(playback.currentTrack?.source.displayName ?? "")
+                    Text(now.track?.source.displayName ?? "")
                         .font(DS.Typo.bodyStrong)
                         .foregroundColor(.white)
-                    if let q = playback.displayQuality {
+                    if let q = engine?.displayQuality {
                         Text(QualityBadgeStyle(quality: q).label)
                             .font(.system(size: 10, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
@@ -274,7 +282,7 @@ struct PlayerView: View {
                                     .stroke(Color.white.opacity(0.75), lineWidth: 1)
                             )
                     }
-                    if let origin = playback.currentOrigin {
+                    if let origin = now.currentOrigin {
                         HStack(spacing: 3) {
                             Image(systemName: origin.iconName).font(.system(size: 9, weight: .bold))
                             Text(origin.displayLabel).font(.system(size: 10, weight: .semibold))
@@ -291,10 +299,10 @@ struct PlayerView: View {
                 AirPlayButton()
                     .frame(width: 36, height: 36)
                 Menu {
-                    Button { if let t = playback.currentTrack { trackToFavorite = t } } label: {
+                    Button { if let t = now.track { trackToFavorite = t } } label: {
                         Label("收藏", systemImage: "heart")
                     }
-                    Button { if let t = playback.currentTrack { trackToDownload = t } } label: {
+                    Button { if let t = now.track { trackToDownload = t } } label: {
                         Label("下载", systemImage: "arrow.down.circle")
                     }
                     Divider()
@@ -308,7 +316,7 @@ struct PlayerView: View {
                             Label("播放 MV", systemImage: "play.rectangle")
                         }
                     }
-                    .disabled(loadingMv || playback.currentTrack == nil)
+                    .disabled(loadingMv || now.track == nil)
                     Button { showSleepSheet = true } label: {
                         // Active timer shows its label so the user can see what's armed at a glance.
                         switch sleepTimer.mode {
@@ -327,7 +335,7 @@ struct PlayerView: View {
                         .frame(width: 44, height: 36)   // generous hit area, no visible chrome
                         .contentShape(Rectangle())
                 }
-                .disabled(playback.currentTrack == nil)
+                .disabled(now.track == nil)
             }
         }
         .frame(maxWidth: .infinity)
@@ -360,13 +368,13 @@ struct PlayerView: View {
             // instead of hard-cutting on each property update. Scale on the way in
             // gives a tiny "rise" — feels like the new song settled into place.
             ZStack {
-                if let track = playback.currentTrack {
+                if let track = now.track {
                     VStack(spacing: 0) {
                         Artwork(url: downloads.displayCoverURL(for: track), size: 320, radius: DS.Radius.xlarge)
                             .elevation(DS.Elevation.e3(artwork.primary))
                             .shadow(color: .black.opacity(0.35), radius: 14, y: 8)
-                            .scaleEffect(playback.isPlaying ? 1.0 : 0.92)
-                            .animation(DS.Motion.emphasis, value: playback.isPlaying)
+                            .scaleEffect(now.isPlaying ? 1.0 : 0.92)
+                            .animation(DS.Motion.emphasis, value: now.isPlaying)
 
                         VStack(spacing: 6) {
                             Text(track.name)
@@ -380,9 +388,9 @@ struct PlayerView: View {
                             // 角标(按实测校正后的档位)+ 文件头实测规格 — 角标在前。
                             // 背景是封面动态色,用白描边白字而非 QualityBadge 的彩色 tint,
                             // 避免和大色块对比度不够。任一存在就显示这一行。
-                            if playback.displayQuality != nil || playback.currentAudioSpec != nil {
+                            if engine?.displayQuality != nil || now.currentAudioSpec != nil {
                                 HStack(spacing: 6) {
-                                    if let q = playback.displayQuality {
+                                    if let q = engine?.displayQuality {
                                         Text(QualityBadgeStyle(quality: q).label)
                                             .font(.system(size: 10, weight: .heavy, design: .rounded))
                                             .foregroundColor(.white)
@@ -392,7 +400,7 @@ struct PlayerView: View {
                                                     .stroke(Color.white.opacity(0.75), lineWidth: 1)
                                             )
                                     }
-                                    if let spec = playback.currentAudioSpec {
+                                    if let spec = now.currentAudioSpec {
                                         Text(spec.displayText)
                                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                                             .foregroundColor(.white.opacity(0.5))
@@ -403,8 +411,8 @@ struct PlayerView: View {
                             }
                         }
                         .padding(.top, DS.Spacing.xl)
-                        .animation(DS.Motion.standard, value: playback.currentAudioSpec)
-                        .animation(DS.Motion.standard, value: playback.displayQuality)
+                        .animation(DS.Motion.standard, value: now.currentAudioSpec)
+                        .animation(DS.Motion.standard, value: engine?.displayQuality)
                     }
                     .id(track.id)
                     .transition(.asymmetric(
@@ -413,9 +421,9 @@ struct PlayerView: View {
                     ))
                 }
             }
-            .animation(DS.Motion.standard, value: playback.currentTrack?.id)
+            .animation(DS.Motion.standard, value: now.track?.id)
 
-            AudioWave(active: playback.isPlaying && !playback.isBuffering)
+            AudioWave(active: now.isPlaying && !now.isBuffering)
                 .frame(height: 68)
                 .padding(.horizontal, 4)
                 .padding(.top, DS.Spacing.l)
@@ -427,53 +435,13 @@ struct PlayerView: View {
     // MARK: - Lyrics page
 
     private var lyricsPage: some View {
-        Group {
-            if loadingLyrics {
-                UIKitSpinner(style: .medium, color: .white)
-            } else if lyrics.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "text.alignleft")
-                        .font(.system(size: 40, weight: .light))
-                        .foregroundColor(.white.opacity(0.5))
-                    Text("暂无歌词").foregroundColor(.white.opacity(0.7))
-                }
-            } else {
-                LyricsScroll(lines: lyrics, currentTime: playback.currentTime, onTap: { time in
-                    playback.seek(to: time)
-                })
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        LyricsPageView(lines: lyrics, loading: loadingLyrics, onSeek: { engine?.seek(to: $0) })
     }
 
     // MARK: - Progress section
 
     private var progressSection: some View {
-        VStack(spacing: 6) {
-            ProgressSlider(
-                value: Binding(
-                    get: { isSeeking ? seekValue : playback.currentTime },
-                    set: { seekValue = $0; isSeeking = true }
-                ),
-                in: 0...max(playback.duration, 1),
-                onChangeBegan: { isSeeking = true },
-                onChangeEnded: {
-                    playback.seek(to: seekValue)
-                    isSeeking = false
-                }
-            )
-            HStack {
-                Text(format(time: isSeeking ? seekValue : playback.currentTime))
-                Spacer()
-                Text("-" + format(time: max(0, playback.duration - (isSeeking ? seekValue : playback.currentTime))))
-            }
-            .font(DS.Typo.numeric)
-            // Same beige family as the thumb/transport row, kept very low
-            // opacity so the time-readout sits in the background and the eye
-            // lands on the cover + play button first.
-            .foregroundStyle(DS.Palette.cassetteBody.opacity(0.36))
-        }
-        .padding(.bottom, DS.Spacing.l)
+        ProgressSectionView()
     }
 
     // MARK: - Controls
@@ -488,20 +456,20 @@ struct PlayerView: View {
         let secondaryTint = DS.Palette.cassetteBody.opacity(0.5)
         return HStack {
             Button {
-                cycleMode.advanced().apply(to: playback)
+                if let e = engine { cycleMode.advanced().apply(to: e) }
             } label: {
                 Image(systemName: cycleMode.icon)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(secondaryTint)
             }
             Spacer()
-            Button { playback.previous() } label: {
+            Button { engine?.previous() } label: {
                 Image(systemName: "backward.end.fill")
                     .font(.system(size: 28, weight: .medium))
                     .foregroundStyle(secondaryTint)
             }
             Spacer()
-            Button { playback.togglePlayPause() } label: {
+            Button { engine?.togglePlayPause() } label: {
                 ZStack {
                     // Warm beige disc echoes the cassette body in the app icon —
                     // pressing it feels like pressing a cassette key. Glyph is
@@ -512,14 +480,14 @@ struct PlayerView: View {
                         .frame(width: 76, height: 76)
                         .shadow(color: artwork.primary.opacity(0.55), radius: 22, y: 8)
                         .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
-                    if playback.isBuffering {
+                    if now.isBuffering {
                         UIKitSpinner(style: .medium, color: UIColor(DS.Palette.brandStart))
                     } else {
                         // Top→bottom burgundy → brass mini-gradient gives the
                         // glyph a subtle "metal-warmed" feel, and 0.85 opacity
                         // lets the beige disc bleed through a bit so the
                         // triangle/pause bars don't punch as hard.
-                        Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+                        Image(systemName: now.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(
                                 LinearGradient(
@@ -530,12 +498,12 @@ struct PlayerView: View {
                                     startPoint: .top, endPoint: .bottom
                                 )
                             )
-                            .offset(x: playback.isPlaying ? 0 : 2)
+                            .offset(x: now.isPlaying ? 0 : 2)
                     }
                 }
             }
             Spacer()
-            Button { playback.next() } label: {
+            Button { engine?.next() } label: {
                 Image(systemName: "forward.end.fill")
                     .font(.system(size: 28, weight: .medium))
                     .foregroundStyle(secondaryTint)
@@ -549,11 +517,82 @@ struct PlayerView: View {
         }
     }
 
+}
+
+// MARK: - 进度条(独立订阅 4Hz,不牵连整页)
+
+/// 只订阅 PlaybackTicker 的 currentTime/duration,自己每 0.25 秒刷新,
+/// 不观察 PlaybackEngine。进度条更新不会触发整个 PlayerView 重绘,
+/// 封面/背景/控制条等重视图在播放期间保持稳定,开场滑入也不卡。
+private struct ProgressSectionView: View {
+    /// 同 PlayerView:不观察 PlaybackEngine,只经 AppServices 取指令,4Hz 进度走 clock。
+    private var engine: PlaybackEngine? { AppServices.shared.playback }
+    @ObservedObject private var clock = PlaybackTicker.shared
+    @State private var isSeeking: Bool = false
+    @State private var seekValue: Double = 0
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ProgressSlider(
+                value: Binding(
+                    get: { isSeeking ? seekValue : clock.currentTime },
+                    set: { seekValue = $0; isSeeking = true }
+                ),
+                in: 0...max(clock.duration, 1),
+                onChangeBegan: { isSeeking = true },
+                onChangeEnded: {
+                    engine?.seek(to: seekValue)
+                    isSeeking = false
+                }
+            )
+            HStack {
+                Text(format(time: isSeeking ? seekValue : clock.currentTime))
+                Spacer()
+                Text("-" + format(time: max(0, clock.duration - (isSeeking ? seekValue : clock.currentTime))))
+            }
+            .font(DS.Typo.numeric)
+            // Same beige family as the thumb/transport row, kept very low
+            // opacity so the time-readout sits in the background and the eye
+            // lands on the cover + play button first.
+            .foregroundStyle(DS.Palette.cassetteBody.opacity(0.36))
+        }
+        .padding(.bottom, DS.Spacing.l)
+    }
+
     private func format(time: Double) -> String {
         guard time.isFinite, time >= 0 else { return "00:00" }
         let m = Int(time) / 60
         let s = Int(time) % 60
         return String(format: "%02d:%02d", m, s)
+    }
+}
+
+// MARK: - 歌词页(独立订阅 4Hz)
+
+/// 只订阅 PlaybackTicker,歌词滚动的 4Hz 更新局限在 LyricsScroll 内部,
+/// 不影响整页。loading/lines 由 PlayerView 经构造参数传入(低频变化)。
+private struct LyricsPageView: View {
+    let lines: [LyricLine]
+    let loading: Bool
+    let onSeek: (Double) -> Void
+    @ObservedObject private var clock = PlaybackTicker.shared
+
+    var body: some View {
+        Group {
+            if loading {
+                UIKitSpinner(style: .medium, color: .white)
+            } else if lines.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "text.alignleft")
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundColor(.white.opacity(0.5))
+                    Text("暂无歌词").foregroundColor(.white.opacity(0.7))
+                }
+            } else {
+                LyricsScroll(lines: lines, currentTime: clock.currentTime, onTap: onSeek)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

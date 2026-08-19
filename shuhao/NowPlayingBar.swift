@@ -34,6 +34,11 @@ final class NowPlayingBar: ObservableObject {
     /// 4 次失效发生在根视图树里。它只需要这两个值,都是低频的。
     @Published private(set) var lastError: String?
     @Published private(set) var cascadeNotice: String?
+    /// 全屏播放器需要的额外低频展示字段 —— 避免让播放界面观察 PlaybackEngine 而 4Hz 重建。
+    @Published private(set) var currentAudioSpec: AudioSpec?
+    @Published private(set) var currentOrigin: ResolveOrigin?
+    @Published private(set) var shuffle: Bool = false
+    @Published private(set) var loopMode: PlaybackEngine.LoopMode = .all
 
     private var bag = Set<AnyCancellable>()
 
@@ -69,20 +74,48 @@ final class NowPlayingBar: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] in self?.cascadeNotice = $0 }
             .store(in: &bag)
+        engine.$currentAudioSpec
+            .sink { [weak self] in self?.currentAudioSpec = $0 }
+            .store(in: &bag)
+        engine.$currentOrigin
+            .sink { [weak self] in self?.currentOrigin = $0 }
+            .store(in: &bag)
+        engine.$shuffle
+            .removeDuplicates()
+            .sink { [weak self] in self?.shuffle = $0 }
+            .store(in: &bag)
+        engine.$loopMode
+            .removeDuplicates()
+            .sink { [weak self] in self?.loopMode = $0 }
+            .store(in: &bag)
     }
 }
 
-/// 4Hz 的播放进度(0…1)。只有进度环观察它,重建范围限于那一个叶子视图。
+/// 4Hz 的播放进度。只有真正需要进度的叶子视图(进度条、歌词滚动)观察它,
+/// 不牵连整个播放界面 —— 否则每 0.25 秒整页重绘一次,开场滑入动画期间会严重掉帧。
 @MainActor
 final class PlaybackTicker: ObservableObject {
     static let shared = PlaybackTicker()
 
+    /// 0…1 进度比例(给进度环用)
     @Published private(set) var fraction: Double = 0
+    /// 绝对当前时间(秒)—— 进度条与时间标签用
+    @Published private(set) var currentTime: Double = 0
+    /// 总时长(秒)—— 进度条上限用
+    @Published private(set) var duration: Double = 0
 
     private var bag = Set<AnyCancellable>()
 
     func bind(to engine: PlaybackEngine) {
         bag.removeAll()
+        engine.$currentTime
+            .removeDuplicates()
+            .sink { [weak self] in self?.currentTime = $0 }
+            .store(in: &bag)
+        engine.$duration
+            .removeDuplicates()
+            .sink { [weak self] in self?.duration = $0 }
+            .store(in: &bag)
         engine.$currentTime
             .combineLatest(engine.$duration)
             .map { time, total in total > 0 ? min(1, max(0, time / total)) : 0 }
