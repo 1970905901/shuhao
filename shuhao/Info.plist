@@ -10,8 +10,6 @@
 	<array>
 		<string>INPlayMediaIntent</string>
 	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>听歌识曲需要使用麦克风采集周围的音乐声音。</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
