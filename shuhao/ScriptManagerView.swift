@@ -170,9 +170,11 @@ struct ScriptManagerView: View {
 
     /// 从当前窗口最顶层 VC 原生弹出系统文档选择器。
     private func presentScriptPicker() {
-        let delegate = ScriptPickerDelegate { [weak self] result in
-            self?.pickerDelegate = nil
-            self?.handlePicked(result)
+        // struct 不能 [weak self],直接捕获拷贝即可 —— @State 底层是共享存储,
+        // 回调里通过这份拷贝写状态照样会驱动视图刷新。
+        let delegate = ScriptPickerDelegate { result in
+            self.pickerDelegate = nil
+            self.handlePicked(result)
         }
         pickerDelegate = delegate
 
