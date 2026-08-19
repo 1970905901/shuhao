@@ -408,62 +408,51 @@ struct PlayerView: View {
 
 // MARK: - 网易云黑胶唱片
 
-/// 网易云黑胶唱片样式的封面:整张唱片(黑色碟身 + 中心圆形封面 label)播放时
-/// 匀速旋转,暂停/缓冲时冻结在当前角度。
+/// 网易云黑胶唱片样式的封面:整张唱片(黑色碟身 + 中心圆形封面 label)。
 ///
-/// ⚠️ 旋转用 TimelineView(.animation) 的时间戳连续算角度 + rotationEffect,
-/// 不用 CALayer CABasicAnimation:后者(曾在 aa61da0 引入)在暂停时执行
-/// `layer.setValue(_, forKeyPath: "transform.rotation.z")` 写入 model layer 的
-/// transform —— 暂停/播放反复切换时与 SwiftUI 布局重算叠加,导致黑胶视觉尺寸
-/// 跳变(用户报告的"暂停/播放循环变大变小")。TimelineView 用时间戳算角度,
-/// paused 时停更 → 唱片停在当前角度,恢复后继续转,手感最接近真黑胶;
-/// 且完全不触碰 layer transform,从根源消除缩放抖动。
+/// ⚠️ 静态不旋转(用户明确要求):移除 TimelineView 时间戳旋转,唱片永远静止。
+/// 之前用旋转动画时,暂停/播放反复切换会出现"黑胶循环变大变小"的视觉跳变
+/// (CALayer transform 写入 / SwiftUI 布局重算叠加),静止后彻底消除该问题。
 private struct VinylRecord: View {
     let coverURL: String?
-    /// true = 播放中,唱片旋转;false = 暂停/缓冲,冻结。
+    /// 保留参数以兼容调用方(不再使用)。
     let spinning: Bool
     /// 封面占位渐变用的兜底色(取自封面主色调)。
     let fallback: Color
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !spinning)) { context in
-            // 30°/s → 12 秒一圈,观感接近网易云的转速
-            let angle = (context.date.timeIntervalSinceReferenceDate * 30.0)
-                .truncatingRemainder(dividingBy: 360.0)
-            ZStack {
-                // 黑胶碟身:径向渐变做出唱片质感 + 几圈同心唱片纹
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color(white: 0.16), Color(white: 0.06), Color(white: 0.02)],
-                            center: .center, startRadius: 6, endRadius: 160
-                        )
+        ZStack {
+            // 黑胶碟身:径向渐变做出唱片质感 + 几圈同心唱片纹
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 0.16), Color(white: 0.06), Color(white: 0.02)],
+                        center: .center, startRadius: 6, endRadius: 160
                     )
-                    .overlay(
-                        ZStack {
-                            ForEach([40, 68, 96, 124], id: \.self) { d in
-                                Circle()
-                                    .strokeBorder(Color.white.opacity(0.05), lineWidth: 0.5)
-                                    .frame(width: CGFloat(d) * 2, height: CGFloat(d) * 2)
-                            }
+                )
+                .overlay(
+                    ZStack {
+                        ForEach([40, 68, 96, 124], id: \.self) { d in
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.05), lineWidth: 0.5)
+                                .frame(width: CGFloat(d) * 2, height: CGFloat(d) * 2)
                         }
-                    )
+                    }
+                )
 
-                // 中心 label:圆形封面(随唱片一起转)
-                VinylCover(url: coverURL, fallback: fallback)
-                    .frame(width: 172, height: 172)
-                    .clipShape(Circle())
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 1.5))
+            // 中心 label:圆形封面(静止)
+            VinylCover(url: coverURL, fallback: fallback)
+                .frame(width: 172, height: 172)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 1.5))
 
-                // 中心轴孔
-                Circle()
-                    .fill(Color(white: 0.08))
-                    .frame(width: 12, height: 12)
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5))
-            }
-            .frame(width: 320, height: 320)
-            .rotationEffect(.degrees(angle))
+            // 中心轴孔
+            Circle()
+                .fill(Color(white: 0.08))
+                .frame(width: 12, height: 12)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5))
         }
+        .frame(width: 320, height: 320)
     }
 }
 

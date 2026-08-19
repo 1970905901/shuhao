@@ -50,7 +50,7 @@ struct SplashView: View {
                     Text("shuhao")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(DS.Palette.brandGradient)
-                    Text("随便听")
+                    Text("shuhao music")
                         .font(.system(size: 13))
                         .foregroundStyle(.white.opacity(0.6))
                 }
@@ -81,8 +81,7 @@ struct SplashView: View {
     /// gradient square with a music glyph.
     @ViewBuilder
     private var appLogo: some View {
-        if let ui = UIImage(named: "AppIcon")
-            ?? Bundle.main.icon {
+        if let ui = Self.appIconImage {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFill()
@@ -94,6 +93,16 @@ struct SplashView: View {
                     .foregroundStyle(.white)
             }
         }
+    }
+
+    /// 当前 App 图标。单槽 universal 1024 下 `UIImage(named: "AppIcon")` 经常拿不到
+    /// (系统对 AppIcon 资源特殊处理),直接读打包进 App 的 `icon-1024.png`
+    /// (actool 会把 AppIcon 源文件拷进 bundle),保证启动页与主屏图标严格一致,
+    /// 不会闪现旧版图标。
+    private static var appIconImage: UIImage? {
+        if let img = UIImage(named: "AppIcon") { return img }
+        if let img = UIImage(named: "icon-1024") { return img }
+        return Bundle.main.icon
     }
 }
 
