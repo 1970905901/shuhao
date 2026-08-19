@@ -127,6 +127,9 @@ struct RootTabView: View {
             phoneTabs
             overlays
         }
+        // 必须显式撑满全屏,否则 .overlay(alignment: .bottom) 的"底部"会跟着
+        // phoneTabs 的固有高度走 —— 搜索页空态内容不高时,悬浮条会被甩到屏幕中间。
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Show the full PlayerView with the standard spring animation. Tapping the
@@ -213,6 +216,9 @@ struct RootTabView: View {
         // NavigationStack push 出来的二级页 —— 这正是 safeAreaInset 到不了的地方。
         // 没歌在放时不留白,免得列表底部凭空多一块空隙。
         .bottomContentMargin(now.track != nil ? MiniPlayerMetrics.scrollBottomMargin : 0)
+        // 显式撑满:root ZStack 已经撑满,这里再显式声明一层,防止 TabView 在某些
+        // 内容较短的 tab(如搜索空态)上收缩,导致 .overlay 底部不是屏幕底。
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Overlays (mini player, error banner, full player)
