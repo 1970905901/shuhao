@@ -433,8 +433,7 @@ struct MvPlayerView: View {
         statusObserver?.cancel()
         statusObserver = item.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] status in
-                guard let self else { return }
+            .sink { [self] status in
                 switch status {
                 case .readyToPlay:
                     let d = item.asset.duration.seconds
