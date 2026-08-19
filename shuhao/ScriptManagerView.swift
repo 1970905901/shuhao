@@ -155,10 +155,13 @@ struct ScriptManagerView: View {
             }
             // ⚠️ 从本地选脚本文件不走 SwiftUI 的 `.fileImporter` —— iOS 16/17 上它
             // 嵌在 sheet 里时,系统文档选择器能打开、能浏览文件,但点选 .js/.json
-            // 这类"非 document"类型文件时选择器不关闭、回调不触发,表现为"点了
-            // 没反映"(已踩坑:挂 Form 上不行、挂 NavigationStack 上也不行,去掉
-            // .data 也不行)。换成 UIKit 的 UIDocumentPickerViewController 直连呈现,
-            // 选中/取消都走 UIDocumentPickerDelegate,完全绕开 SwiftUI 那层。
+            // 这类"非 document"类型文件时选择器不关闭、回调不触发(挂 Form / 挂
+            // NavigationStack / 去掉 .data 都无效)。换成 UIKit 的
+            // UIDocumentPickerViewController 也仍然点不中 —— 真正的坑在别处:
+            //   a) allowedContentTypes 收太窄(.js 常被归到非标准动态类型,列出来但置灰);
+            //   b) 把选择器直接塞进 fullScreenCover/sheet 内容,不走它自己原生呈现。
+            // 所以 ScriptFilePicker 用宿主 VC 原生 present + 内容类型放宽到 .item,
+            // 见下面 ScriptFilePicker 的注释。
             .fullScreenCover(isPresented: $showFileImporter) {
                 ScriptFilePicker { result in
                     showFileImporter = false
@@ -256,27 +259,42 @@ struct ScriptManagerView: View {
 ///
 /// 为什么不用 SwiftUI 的 `.fileImporter`:iOS 16/17 上 `.fileImporter` 嵌在 sheet 里时,
 /// 系统文档选择器能打开、能浏览文件,但点选 `.js` / `.json` 这类"非 document"类型
-/// 文件时选择器不关闭、回调不触发,表现为"点了没反映"(把修饰符挂到 sheet 内容根、
-/// 去掉 `.data` 通配类型都无效)。换成 UIKit 直连呈现,选中/取消都走
-/// `UIDocumentPickerDelegate`,完全绕开 SwiftUI 那层对文档选择的处理。
+/// 文件时选择器不关闭、回调不触发,表现为"点了没反映"。换成 UIKit 直连呈现后,
+/// 点选仍然无效 —— 真正的坑有两个:
+///
+/// 1) `allowedContentTypes` 收太窄:`.javaScript/.text/.plainText/.json` 里,iOS 未必把
+///    `.js` 文件归到这些类型(常被标记成 `com.netscape.javascript-source` 之类的动态类型),
+///    于是选择器把文件列出来但置灰、点不中。放宽到 `.item`(任意文件)即可 —— 反正
+///    读回来我们自己按文本解析,选到非文本再提示编码错误。
+/// 2) 把选择器直接塞进 SwiftUI 的 fullScreenCover/sheet 内容里,不走它自己原生的呈现
+///    控制器,点选/回退偶尔失效。这里用一个"宿主 VC"在挂载后原生 `present` 选择器,
+///    选择/取消全走系统呈现控制器,行为与系统文件 App 一致。
 struct ScriptFilePicker: UIViewControllerRepresentable {
     let onPick: (Result<URL, Error>) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
 
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(
-            forOpeningContentTypes: [.javaScript, .text, .plainText, .json]
-        )
-        picker.allowsMultipleSelection = false
-        picker.delegate = context.coordinator
-        return picker
+    func makeUIViewController(context: Context) -> UIViewController {
+        // 宿主 VC:等它真正进入视图层级后,再原生 present 文档选择器。
+        let host = UIViewController()
+        host.view.backgroundColor = .clear
+        let coordinator = context.coordinator
+        DispatchQueue.main.async {
+            guard !coordinator.didPresent else { return }
+            coordinator.didPresent = true
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item])
+            picker.allowsMultipleSelection = false
+            picker.delegate = coordinator
+            host.present(picker, animated: true)
+        }
+        return host
     }
 
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
         private let onPick: (Result<URL, Error>) -> Void
+        var didPresent = false
         init(onPick: @escaping (Result<URL, Error>) -> Void) { self.onPick = onPick }
 
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
