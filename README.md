@@ -1,4 +1,6 @@
-# 随便听 · shuhao
+# shuhao music
+
+> 让每一段旋律,都有归属。
 
 > 一款 **原生 SwiftUI 的 iPhone 音乐播放器**（iOS），使用 **Swift 6 + SwiftUI + JavaScriptCore** 编写，**安装后需先在设置页面配置自定义音源**，否则播放不了音乐。
 
@@ -46,7 +48,7 @@
 | **本地导入** | 选择文件夹递归扫描导入本地音乐，自动读取内嵌标签 |
 | **播放页** | 封面取色动态背景、实时音浪、滚动歌词、**实测音频规格标注**（如 `FLAC 24bit/44.1kHz`，探测自真实流而非接口宣称） |
 | **播放能力** | 10 段 EQ 均衡器、AirPlay、睡眠定时、后台播放、锁屏/控制中心/CarPlay 控件、MV 播放 |
-| **系统集成** | Siri / App Shortcuts（"用随便听播放晴天"）、ShazamKit 听歌识曲 |
+| **系统集成** | Siri / App Shortcuts（"用 shuhao music 播放晴天"）、ShazamKit 听歌识曲 |
 | **设置 / 自定义源** | 音质偏好、内置直连兜底开关，URL / 粘贴 / 文件三种方式导入管理 lx-music v4 脚本 |
 
 ---
