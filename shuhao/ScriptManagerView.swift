@@ -151,13 +151,23 @@ struct ScriptManagerView: View {
                     // Each mode takes a different input; don't carry stale text/file across.
                     inputText = ""; pickedFileName = nil; error = nil
                 }
-                .fileImporter(
-                    isPresented: $showFileImporter,
-                    allowedContentTypes: [.javaScript, .text, .plainText, .json, .data],
-                    allowsMultipleSelection: false
-                ) { result in
-                    loadPickedFile(result)
-                }
+            }
+            // ⚠️ .fileImporter 必须挂在 sheet 内容的根(NavigationStack)上,不能藏在
+            // 里头的 Form 里。iOS 16/17 上 .fileImporter 嵌在 Form/Section 里时,系统
+            // 文档选择器能正常打开、能浏览文件,但点选 .js / .json 这类"非 document"
+            // 类型文件时,选择器不关闭、回调不触发,表现为"点了没反映"。
+            // 挂到 NavigationStack(本弹窗内容根)上,选择器能拿到稳定的呈现上下文,
+            // 选完正常 dismiss 并把 URL 传回来。
+            //
+            // 另:`allowedContentTypes` 不要带 `.data` —— 它是动态通配类型,跟具体
+            // 类型混用会让 iOS 文档选择器在选非 document 文件时选不中。脚本就是脚本,
+            // 限定到 .js / 文本类即可。
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.javaScript, .text, .plainText, .json],
+                allowsMultipleSelection: false
+            ) { result in
+                loadPickedFile(result)
             }
     }
 
@@ -174,8 +184,21 @@ struct ScriptManagerView: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             let data = try Data(contentsOf: url)
-            guard let text = String(data: data, encoding: .utf8) else {
-                error = "无法以 UTF-8 读取该文件"; return
+            // 1) 去 UTF-8 BOM(EF BB BF),不少 JS 文件被编辑器加上 BOM
+            // 2) 优先 UTF-8;失败再退到 ASCII,避免一上来就报"无法以 UTF-8 读取"
+            let stripped: Data
+            if data.count >= 3, data[0] == 0xEF, data[1] == 0xBB, data[2] == 0xBF {
+                stripped = data.subdata(in: 3..<data.count)
+            } else {
+                stripped = data
+            }
+            let text: String
+            if let utf8 = String(data: stripped, encoding: .utf8) {
+                text = utf8
+            } else if let ascii = String(data: stripped, encoding: .ascii) {
+                text = ascii
+            } else {
+                error = "无法识别文件编码(请确认是 UTF-8 / ASCII 文本)"; return
             }
             inputText = text
             pickedFileName = url.lastPathComponent
