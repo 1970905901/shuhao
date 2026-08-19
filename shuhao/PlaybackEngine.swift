@@ -127,6 +127,8 @@ final class PlaybackEngine: ObservableObject {
         return dir.appendingPathComponent("playbackState.json")
     }()
     private var lastPersist = Date.distantPast
+    /// 锁屏/控制中心 now-playing 信息上次刷新的时间 —— 见 updateNowPlayingTime 的节流说明。
+    private var lastNowPlayingUpdate = Date.distantPast
     /// Set while restoring a previous session: we defer creating the AVPlayer until the user hits
     /// play, then seek to this position once the item is ready.
     private var pendingRestorePosition: Double?
@@ -599,7 +601,7 @@ final class PlaybackEngine: ObservableObject {
     func pause() {
         if usingHiRes { hiResPlayer.pause() } else { player?.pause() }
         isPlaying = false
-        updateNowPlayingTime()
+        updateNowPlayingTime(force: true)
         persistState(force: true)
     }
 
@@ -625,7 +627,7 @@ final class PlaybackEngine: ObservableObject {
         }
         if usingHiRes { hiResPlayer.resume() } else { player?.play() }
         isPlaying = true
-        updateNowPlayingTime()
+        updateNowPlayingTime(force: true)
     }
 
     func seek(to seconds: Double) {
@@ -636,7 +638,7 @@ final class PlaybackEngine: ObservableObject {
             player?.seek(to: CMTime(seconds: clamped, preferredTimescale: 600))
         }
         currentTime = clamped
-        updateNowPlayingTime()
+        updateNowPlayingTime(force: true)
         persistState(force: true)
     }
 
@@ -751,7 +753,17 @@ final class PlaybackEngine: ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
-    private func updateNowPlayingTime() {
+    private func updateNowPlayingTime(force: Bool = false) {
+        // ⚠️ 节流:这个方法被 periodicTimeObserver 每 0.25s 调用一次,而
+        // MPNowPlayingInfoCenter.default().nowPlayingInfo 写入是跨进程 XPC
+        // (主线程 → mediaserverd),播放中持续 4Hz 调用是打开/关闭播放器动画
+        // 卡顿的元凶之一(播放时有、暂停时无,正好吻合"播放时卡、不播放时正常")。
+        // 锁屏/控制中心的秒针按 1s 粒度即可;用户主动操作(暂停/恢复/拖动)传 force。
+        if !force {
+            let now = Date()
+            if now.timeIntervalSince(lastNowPlayingUpdate) < 1.0 { return }
+            lastNowPlayingUpdate = now
+        }
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0

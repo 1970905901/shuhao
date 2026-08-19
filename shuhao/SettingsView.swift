@@ -57,8 +57,6 @@ struct SettingsView: View {
                 }
             } header: {
                 Text("音源")
-            } footer: {
-                Text("播放地址解析由自定义源脚本完成,纯脚本模式(无内置直连兜底)。解析失败会直接报错并尝试跨平台自动换源。")
             }
 
             if !sources.loadedScripts.isEmpty {

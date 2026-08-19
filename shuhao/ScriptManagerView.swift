@@ -1,6 +1,4 @@
 import SwiftUI
-import UIKit  // UIDocumentPickerViewController (ScriptFilePicker)
-import UniformTypeIdentifiers
 
 struct ScriptManagerView: View {
     @EnvironmentObject var scripts: ScriptStore
@@ -11,8 +9,8 @@ struct ScriptManagerView: View {
     @State private var pickedFileName: String?
     @State private var isLoading = false
     @State private var error: String?
-    /// 持有文档选择器的 delegate,防止 present 期间被释放导致回调丢失。
-    @State private var pickerDelegate: ScriptPickerDelegate?
+    /// 系统文件选择器是否弹出(SwiftUI .fileImporter,iOS 16+ 官方 API)。
+    @State private var showFilePicker = false
 
     enum ImportMode: String, CaseIterable, Identifiable {
         case url = "从 URL"
@@ -100,113 +98,90 @@ struct ScriptManagerView: View {
                 Button { showImport = true } label: { Image(systemName: "plus") }
             }
         }
-        // 导入弹窗 —— Mac → .popover(点外面/Esc 关,跟设置弹窗一致),iOS → .sheet。
+        // 导入弹窗 —— Mac → .popover(点外面/Esc 关,跟设置弹窗一致),iOS → fullScreenCover。
+        // ⚠️ iOS 用 fullScreenCover 而不是 sheet:fullScreenCover 是独立的呈现上下文,
+        // 里面再弹 .fileImporter 时不会被嵌套 sheet 的呈现控制器干扰 —— 这是历史
+        // 上"文档选择器能打开但点文件无反应"的根因之一(iOS 16/17 上 sheet 内嵌
+        // fileImporter/UIDocumentPicker 回调会丢)。
         #if targetEnvironment(macCatalyst)
         .popover(isPresented: $showImport) {
             importForm
                 .frame(width: 520, height: 600)
         }
         #else
-        .sheet(isPresented: $showImport) {
+        .fullScreenCover(isPresented: $showImport) {
             importForm
         }
         #endif
     }
 
     private var importForm: some View {
-            NavigationStack {
-                Form {
-                    Picker("方式", selection: $importMode) {
-                        ForEach(ImportMode.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
+        NavigationStack {
+            Form {
+                Picker("方式", selection: $importMode) {
+                    ForEach(ImportMode.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
 
-                    if importMode == .file {
-                        Section {
-                            Button {
-                                presentScriptPicker()
-                            } label: {
-                                Label(pickedFileName ?? "选择脚本文件", systemImage: "doc.badge.plus")
-                            }
-                            if pickedFileName != nil {
-                                Text("已读取 \(inputText.count) 字符")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } header: {
-                            Text("脚本文件")
-                        } footer: {
-                            // 系统文件界面点文件是"选中",要再点右上角"打开"才会返回
-                            Text("在系统文件界面选中脚本后,请点右上角「打开」完成选择")
-                                .font(.caption)
-                        }
-                    } else {
-                        Section(importMode == .url ? "脚本 URL" : "脚本内容") {
-                            TextEditor(text: $inputText)
-                                .frame(minHeight: importMode == .url ? 60 : 200)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                        }
-                    }
-                    if let error {
-                        Text(error).foregroundColor(.red).font(.caption)
-                    }
+                if importMode == .file {
                     Section {
-                        Button(isLoading ? "导入中..." : "导入并加载") {
-                            Task { await doImport() }
+                        Button {
+                            // 点按钮才弹文件选择器 —— 不在 Form 内部直接挂 .fileImporter,
+                            // 避免选择器呈现上下文和 Form 的滚动/焦点系统打架。
+                            showFilePicker = true
+                        } label: {
+                            Label(pickedFileName ?? "选择脚本文件", systemImage: "doc.badge.plus")
                         }
-                        .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading)
+                        if pickedFileName != nil {
+                            Text("已读取 \(inputText.count) 字符")
+                                .font(.caption).foregroundColor(.secondary)
+                        }
+                    } header: {
+                        Text("脚本文件")
+                    } footer: {
+                        // 系统文件界面点文件是"选中",要再点右上角"打开"才会返回
+                        Text("在系统文件界面选中脚本后,请点右上角「打开」完成选择")
+                            .font(.caption)
+                    }
+                } else {
+                    Section(importMode == .url ? "脚本 URL" : "脚本内容") {
+                        TextEditor(text: $inputText)
+                            .frame(minHeight: importMode == .url ? 60 : 200)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
                     }
                 }
-                .navigationTitle("导入脚本")
-                .navigationBarTitleDisplayMode(.inline)
-                .sheetNavBarSurface()
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("取消") { showImport = false; reset() }
-                    }
+                if let error {
+                    Text(error).foregroundColor(.red).font(.caption)
                 }
-                .shOnChange(of: importMode) {
-                    // Each mode takes a different input; don't carry stale text/file across.
-                    inputText = ""; pickedFileName = nil; error = nil
+                Section {
+                    Button(isLoading ? "导入中..." : "导入并加载") {
+                        Task { await doImport() }
+                    }
+                    .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isLoading)
                 }
             }
-            // 从本地选脚本文件:直接找窗口最顶层 VC 原生 present 系统文档选择器。
-            // 之前试过 SwiftUI .fileImporter(挂 Form / NavigationStack / 去 .data)
-            // 和 UIDocumentPickerViewController 塞进 fullScreenCover/sheet 内容,
-            // 在 iOS 16/17 上都有"选择器能打开、能浏览,但点文件无反应"的坑 ——
-            // 根因就是这些呈现容器嵌套导致的回调丢失。present() 走系统呈现控制器,
-            // 不经过任何 SwiftUI 呈现层,选中/取消由 delegate 直接回调。
-    }
-
-    /// 从当前窗口最顶层 VC 原生弹出系统文档选择器。
-    private func presentScriptPicker() {
-        // struct 不能 [weak self],直接捕获拷贝即可 —— @State 底层是共享存储,
-        // 回调里通过这份拷贝写状态照样会驱动视图刷新。
-        let delegate = ScriptPickerDelegate { result in
-            self.pickerDelegate = nil
-            self.handlePicked(result)
-        }
-        pickerDelegate = delegate
-
-        guard let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
-              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
-            error = "无法找到窗口上下文"; return
-        }
-        var top = root
-        while let presented = top.presentedViewController { top = presented }
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item])
-        picker.allowsMultipleSelection = false
-        picker.delegate = delegate
-        top.present(picker, animated: true)
-    }
-
-    /// 选择器回调入口:把单个 URL 包装成 loadPickedFile 需要的数组 Result。
-    private func handlePicked(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            loadPickedFile(.success([url]))
-        case .failure(let error):
-            loadPickedFile(.failure(error))
+            .navigationTitle("导入脚本")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavBarSurface()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { showImport = false; reset() }
+                }
+            }
+            .shOnChange(of: importMode) {
+                // Each mode takes a different input; don't carry stale text/file across.
+                inputText = ""; pickedFileName = nil; error = nil
+            }
+            // SwiftUI 原生文件选择器,挂在 fullScreenCover 内容的根上 —— 系统级呈现,
+            // 选中/取消回调由 SwiftUI 托管,不存在 delegate 释放或嵌套呈现丢失的问题。
+            // .item 通配类型保证任意扩展名(.js/.txt/.json/...)都能被选中。
+            .fileImporter(
+                isPresented: $showFilePicker,
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: false,
+                onCompletion: loadPickedFile
+            )
         }
     }
 
@@ -289,27 +264,5 @@ struct ScriptManagerView: View {
         } catch {
             self.error = error.localizedDescription
         }
-    }
-}
-
-// MARK: - UIKit 文档选择器 delegate
-
-/// 系统文档选择器的回调代理。由 `ScriptManagerView.presentScriptPicker()` 创建并持有
-/// (@State pickerDelegate),选中/取消直接回调,不经过任何 SwiftUI 呈现层 —— 绕开
-/// iOS 16/17 上 .fileImporter / 嵌套 sheet 的"点文件无反应"坑。
-final class ScriptPickerDelegate: NSObject, UIDocumentPickerDelegate {
-    private let onPick: (Result<URL, Error>) -> Void
-    init(onPick: @escaping (Result<URL, Error>) -> Void) { self.onPick = onPick }
-
-    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        if let url = urls.first {
-            onPick(.success(url))
-        } else {
-            onPick(.failure(URLError(.cannotOpenFile)))
-        }
-    }
-
-    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        onPick(.failure(URLError(.cancelled)))
     }
 }
