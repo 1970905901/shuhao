@@ -321,7 +321,6 @@ private struct SonglistCard: View {
 
 struct SonglistDetailView: View {
     let info: SonglistInfo
-    @EnvironmentObject var playback: PlaybackEngine
     @EnvironmentObject var playlists: PlaylistStore
     @EnvironmentObject var downloads: DownloadStore
     @StateObject private var artwork = ArtworkColors()
@@ -354,7 +353,7 @@ struct SonglistDetailView: View {
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                playback.play(track: t, in: detail.tracks, startIndex: idx)
+                                AppServices.shared.playback?.play(track: t, in: detail.tracks, startIndex: idx)
                             }
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
@@ -461,7 +460,7 @@ struct SonglistDetailView: View {
                     .foregroundStyle(DS.Palette.textTertiary)
                 if !detail.tracks.isEmpty {
                     Button {
-                        playback.play(track: detail.tracks[0], in: detail.tracks, startIndex: 0)
+                        AppServices.shared.playback?.play(track: detail.tracks[0], in: detail.tracks, startIndex: 0)
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "play.fill")

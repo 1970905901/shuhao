@@ -25,7 +25,6 @@ enum SearchScope: Hashable, Identifiable {
 }
 
 struct SearchView: View {
-    @EnvironmentObject var playback: PlaybackEngine
     @EnvironmentObject var playlists: PlaylistStore
     @AppStorage("search.history") private var historyJSON: String = "[]"
     @State private var keyword: String = ""
@@ -156,7 +155,7 @@ struct SearchView: View {
                 .listRowInsets(EdgeInsets(top: 6, leading: DS.Spacing.l, bottom: 6, trailing: DS.Spacing.l))
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    playback.play(track: track, in: results, startIndex: results.firstIndex { $0.id == track.id })
+                    AppServices.shared.playback?.play(track: track, in: results, startIndex: results.firstIndex { $0.id == track.id })
                     pushHistory(keyword)
                 }
                 .trackRowSwipe(track)

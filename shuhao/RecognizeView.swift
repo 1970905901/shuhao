@@ -7,7 +7,6 @@ struct RecognizeView: View {
     var onSearch: (String) -> Void
 
     @StateObject private var recognizer = SongRecognizer()
-    @EnvironmentObject var playback: PlaybackEngine
     @Environment(\.dismiss) private var dismiss
     @State private var pulse = false
 
@@ -53,7 +52,7 @@ struct RecognizeView: View {
         }
         .onAppear {
             // 识别的是环境声,先把自己的播放停掉,免得识别出正在放的歌。
-            if playback.isPlaying { playback.pause() }
+            AppServices.shared.playback?.pause()
             recognizer.start()
         }
         .onDisappear { recognizer.stop() }

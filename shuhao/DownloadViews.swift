@@ -233,7 +233,6 @@ private struct DownloadFolderCard: View {
 struct DownloadFolderView: View {
     let folderID: UUID
     @EnvironmentObject var downloads: DownloadStore
-    @EnvironmentObject var playback: PlaybackEngine
 
     private var folder: DownloadFolder? { downloads.folders.first { $0.id == folderID } }
 
@@ -272,7 +271,7 @@ struct DownloadFolderView: View {
                             }
                         }
                         .contentShape(Rectangle())
-                        .onTapGesture { playback.play(track: t, in: tracks, startIndex: idx) }
+                        .onTapGesture { AppServices.shared.playback?.play(track: t, in: tracks, startIndex: idx) }
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing) {
@@ -342,7 +341,7 @@ struct DownloadFolderView: View {
                     .font(DS.Typo.numeric)
                     .foregroundStyle(DS.Palette.textTertiary)
                 Button {
-                    playback.play(track: tracks[0], in: tracks, startIndex: 0)
+                    AppServices.shared.playback?.play(track: tracks[0], in: tracks, startIndex: 0)
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "play.fill")

@@ -6,7 +6,6 @@ enum LibraryRoute: Hashable {
 
 struct LibraryView: View {
     @EnvironmentObject var playlists: PlaylistStore
-    @EnvironmentObject var playback: PlaybackEngine
     @EnvironmentObject var downloads: DownloadStore
     @EnvironmentObject var history: PlayHistoryStore
     @State private var showCreate = false
@@ -297,7 +296,6 @@ private extension Array {
 struct PlaylistDetailView: View {
     let playlistID: UUID
     @EnvironmentObject var playlists: PlaylistStore
-    @EnvironmentObject var playback: PlaybackEngine
     @EnvironmentObject var downloads: DownloadStore
     @EnvironmentObject var settings: SettingsStore
     @StateObject private var artwork = ArtworkColors()
@@ -336,7 +334,7 @@ struct PlaylistDetailView: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            playback.play(track: t, in: tracks, startIndex: idx)
+                            AppServices.shared.playback?.play(track: t, in: tracks, startIndex: idx)
                         }
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -439,7 +437,7 @@ struct PlaylistDetailView: View {
                 if !tracks.isEmpty {
                     HStack(spacing: 8) {
                         Button {
-                            playback.play(track: tracks[0], in: tracks, startIndex: 0)
+                            AppServices.shared.playback?.play(track: tracks[0], in: tracks, startIndex: 0)
                         } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "play.fill")

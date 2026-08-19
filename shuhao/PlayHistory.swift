@@ -98,7 +98,6 @@ final class PlayHistoryStore: ObservableObject {
 
 struct PlayHistoryView: View {
     @EnvironmentObject var history: PlayHistoryStore
-    @EnvironmentObject var playback: PlaybackEngine
     @State private var showClear = false
 
     var body: some View {
@@ -172,7 +171,7 @@ struct PlayHistoryView: View {
                             TrackRow(track: t)
                         }
                         .contentShape(Rectangle())
-                        .onTapGesture { playback.play(track: t, in: history.tracks, startIndex: idx) }
+                        .onTapGesture { AppServices.shared.playback?.play(track: t, in: history.tracks, startIndex: idx) }
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing) {

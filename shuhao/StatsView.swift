@@ -10,7 +10,6 @@ import Charts
 ///   4. Last-30-day listen heat strip (one bar per day, plays count)
 struct StatsView: View {
     @EnvironmentObject var history: PlayHistoryStore
-    @EnvironmentObject var playback: PlaybackEngine
     @ObservedObject private var downloads = DownloadStore.shared
 
     var body: some View {
@@ -178,7 +177,7 @@ struct StatsView: View {
             .padding(.vertical, DS.Spacing.s)
             .contentShape(Rectangle())
             .onTapGesture {
-                playback.play(track: track)
+                AppServices.shared.playback?.play(track: track)
             }
         }
     }

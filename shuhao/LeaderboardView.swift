@@ -130,7 +130,6 @@ private struct BoardRow: View {
 
 struct BoardDetailView: View {
     let board: BoardInfo
-    @EnvironmentObject var playback: PlaybackEngine
     @EnvironmentObject var playlists: PlaylistStore
     @EnvironmentObject var downloads: DownloadStore
     @StateObject private var artwork = ArtworkColors()
@@ -164,7 +163,7 @@ struct BoardDetailView: View {
                                     .foregroundStyle(DS.Palette.textTertiary)
                                 if !tracks.isEmpty {
                                     Button {
-                                        playback.play(track: tracks[0], in: tracks, startIndex: 0)
+                                        AppServices.shared.playback?.play(track: tracks[0], in: tracks, startIndex: 0)
                                     } label: {
                                         HStack(spacing: 5) {
                                             Image(systemName: "play.fill")
@@ -195,7 +194,7 @@ struct BoardDetailView: View {
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                playback.play(track: t, in: tracks, startIndex: idx)
+                                AppServices.shared.playback?.play(track: t, in: tracks, startIndex: idx)
                             }
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
