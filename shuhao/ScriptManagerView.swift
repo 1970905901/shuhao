@@ -12,6 +12,9 @@ struct ScriptManagerView: View {
     @State private var error: String?
     /// 系统文件选择器是否弹出(SwiftUI .fileImporter,iOS 16+ 官方 API)。
     @State private var showFilePicker = false
+    /// 文件选择完成后的结果弹窗(自动导入,不再要求用户回表单点"导入并加载")。
+    @State private var showResultAlert = false
+    @State private var resultMessage = ""
 
     enum ImportMode: String, CaseIterable, Identifiable {
         case url = "从 URL"
@@ -114,6 +117,21 @@ struct ScriptManagerView: View {
             importForm
         }
         #endif
+        // ⚠️ 文件选择器挂在本视图(列表页)根上,而不是 fullScreenCover 内部:
+        // iOS 16/17 上从模态内再弹 UIDocumentPicker/.fileImporter,呈现层级一深
+        // 回调就丢("点文件无反应")。挂在列表页 = 最干净的系统级呈现上下文。
+        // 流程:导入表单里点"选择脚本文件"→ 关表单 → 弹选择器 → 选完自动导入。
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: false,
+            onCompletion: loadPickedFile
+        )
+        .alert("导入结果", isPresented: $showResultAlert) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(resultMessage)
+        }
     }
 
     private var importForm: some View {
@@ -127,9 +145,12 @@ struct ScriptManagerView: View {
                 if importMode == .file {
                     Section {
                         Button {
-                            // 点按钮才弹文件选择器 —— 不在 Form 内部直接挂 .fileImporter,
-                            // 避免选择器呈现上下文和 Form 的滚动/焦点系统打架。
-                            showFilePicker = true
+                            // 关掉导入表单,再弹文件选择器 —— 选择器永远从列表页(最干净的
+                            // 呈现上下文)弹出,不经过 fullScreenCover 嵌套。选完自动导入。
+                            showImport = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                showFilePicker = true
+                            }
                         } label: {
                             Label(pickedFileName ?? "选择脚本文件", systemImage: "doc.badge.plus")
                         }
@@ -141,7 +162,7 @@ struct ScriptManagerView: View {
                         Text("脚本文件")
                     } footer: {
                         // 系统文件界面点文件是"选中",要再点右上角"打开"才会返回
-                        Text("在系统文件界面选中脚本后,请点右上角「打开」完成选择")
+                        Text("在系统文件界面选中脚本后,请点右上角「打开」完成选择;选完会自动导入")
                             .font(.caption)
                     }
                 } else {
@@ -174,15 +195,8 @@ struct ScriptManagerView: View {
                 // Each mode takes a different input; don't carry stale text/file across.
                 inputText = ""; pickedFileName = nil; error = nil
             }
-            // SwiftUI 原生文件选择器,挂在 fullScreenCover 内容的根上 —— 系统级呈现,
-            // 选中/取消回调由 SwiftUI 托管,不存在 delegate 释放或嵌套呈现丢失的问题。
-            // .item 通配类型保证任意扩展名(.js/.txt/.json/...)都能被选中。
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [.item],
-                allowsMultipleSelection: false,
-                onCompletion: loadPickedFile
-            )
+            // ⚠️ .fileImporter 已移到列表页根视图(见 body),不在这里挂 ——
+            // 避免两个 fileImporter 重复挂载。
         }
     }
 
@@ -217,6 +231,8 @@ struct ScriptManagerView: View {
             }
             inputText = text
             pickedFileName = url.lastPathComponent
+            // 选完文件直接走导入(文件模式),不需要用户回表单再点"导入并加载"。
+            Task { await doImport() }
         } catch {
             // 用户主动取消选择器不算错误,别把 "cancelled" 显示成红色报错。
             let e = error as NSError
@@ -257,13 +273,32 @@ struct ScriptManagerView: View {
             if loaded {
                 showImport = false
                 reset()
+                // 文件模式:表单已关,结果用列表页弹窗告诉用户。
+                if importMode == .file {
+                    resultMessage = "脚本「\(script.name)」导入并加载成功"
+                    showResultAlert = true
+                }
             } else {
                 // 脚本进了列表但加载失败 —— 明确告诉用户,别静默关掉表单。
                 // (load 失败原因已写入 sources.lastError,这里转成表单内提示)
-                self.error = sources.lastError ?? "脚本加载失败,请检查脚本内容"
+                let msg = sources.lastError ?? "脚本加载失败,请检查脚本内容"
+                if importMode == .file {
+                    // 表单已关,错误放列表页弹窗。
+                    resultMessage = msg
+                    showResultAlert = true
+                    reset()
+                } else {
+                    self.error = msg
+                }
             }
         } catch {
-            self.error = error.localizedDescription
+            if importMode == .file {
+                resultMessage = error.localizedDescription
+                showResultAlert = true
+                reset()
+            } else {
+                self.error = error.localizedDescription
+            }
         }
     }
 }

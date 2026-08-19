@@ -349,7 +349,11 @@ struct PlayerView: View {
                         // 旋转,暂停/缓冲时冻结在当前角度。
                         VinylRecord(
                             coverURL: downloads.displayCoverURL(for: track),
-                            spinning: now.isPlaying && !now.isBuffering,
+                            // ⚠️ 只由 isPlaying 驱动,不掺 isBuffering:periodicTimeObserver
+                            // 每 0.25s 赋值一次 isBuffering,网络缓冲抖动时 true↔false 反复,
+                            // 导致 setSpinning 反复移除/重挂 CAAnimation —— 播放中打开播放器
+                            // 动画卡顿的直接元凶之一。缓冲时保持旋转(网易云同款行为)。
+                            spinning: now.isPlaying,
                             fallback: artwork.primary
                         )
                         .frame(width: 320, height: 320)

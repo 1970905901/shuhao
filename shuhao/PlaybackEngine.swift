@@ -481,10 +481,11 @@ final class PlaybackEngine: ObservableObject {
             print("[PlaybackEngine] playback stalled")
         }
 
-        // 0.25s (instead of 0.5s) so the synced lyric line on CarPlay / lock screen and the in-app
-        // lyric scroll advance promptly — combined with LyricSync.leadSeconds this keeps lyrics
-        // slightly ahead of the vocal rather than trailing it.
-        timeObserver = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600), queue: .main) { [weak self] time in
+        // 0.5s 进度发布(实测 4Hz 的 @Published currentTime 会让播放器进度条/歌词
+        // 每秒重建 4 次,播放中打开播放器时正好和开合动画抢主线程 —— 用户反馈
+        // "播放时开合动画卡顿、暂停时正常"的第二个元凶)。0.5s 的进度粒度肉眼
+        // 完全顺滑,CarPlay/锁屏歌词由 LyricSync.leadSeconds 提前量补偿,无感知。
+        timeObserver = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] time in
             let seconds = time.seconds.isFinite ? time.seconds : 0
             Task { @MainActor [weak self] in
                 guard let self else { return }
