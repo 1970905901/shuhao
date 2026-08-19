@@ -2,16 +2,25 @@ import SwiftUI
 
 /// "Up Next" — current playback queue with reorder / remove / tap-to-play.
 /// Shown as a sheet from PlayerView.
+///
+/// ⚠️ 不观察 PlaybackEngine:它的 currentTime 每 0.25 秒发布一次,观察它就等于
+/// 每秒重建 4 次整张队列 sheet(拖动/滚动时尤其明显)。这里只观察低频镜像
+/// NowPlayingBar,队列数据经引擎快照在低频时机(出现 / 切歌)刷新。
 struct QueueView: View {
-    @EnvironmentObject var playback: PlaybackEngine
+    @ObservedObject private var now = NowPlayingBar.shared
     @ObservedObject private var downloads = DownloadStore.shared
     @Environment(\.dismiss) var dismiss
+    /// 队列快照 —— 不随 4Hz 进度重建,只在出现 / 切歌 / 本页操作后刷新。
+    @State private var queue: [Track] = []
+    @State private var queueIndex: Int = 0
+
+    private var engine: PlaybackEngine? { AppServices.shared.playback }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 modeBar
-                if playback.queue.isEmpty {
+                if queue.isEmpty {
                     BrandedEmpty(icon: "music.note.list",
                                  title: "队列空空如也",
                                  subtitle: "从搜索、排行榜或歌单点歌后,接下来播放的歌会显示在这里",
@@ -20,17 +29,20 @@ struct QueueView: View {
                 } else {
                     List {
                         Section {
-                            ForEach(Array(playback.queue.enumerated()), id: \.element.id) { idx, track in
+                            ForEach(Array(queue.enumerated()), id: \.element.id) { idx, track in
                                 row(idx: idx, track: track)
                                     .listRowSeparator(.hidden)
                                     .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
                             }
                             .onMove { src, dst in
                                 guard let from = src.first else { return }
-                                playback.moveInQueue(from: from, to: dst)
+                                engine?.moveInQueue(from: from, to: dst)
+                                refreshSnapshot()
                             }
                             .onDelete { idxs in
-                                for i in idxs.sorted(by: >) { playback.removeFromQueue(at: i) }
+                                guard let e = engine else { return }
+                                for i in idxs.sorted(by: >) { e.removeFromQueue(at: i) }
+                                refreshSnapshot()
                             }
                         } header: {
                             // queue count已经移到 modeBar 右侧,这里只留 section 标题
@@ -53,10 +65,10 @@ struct QueueView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     EditButton()
                 }
-                if !playback.queue.isEmpty {
+                if !queue.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(role: .destructive) {
-                            playback.clearQueue()
+                            engine?.clearQueue()
                             dismiss()
                         } label: {
                             Image(systemName: "trash")
@@ -65,19 +77,28 @@ struct QueueView: View {
                 }
             }
         }
+        .onAppear { refreshSnapshot() }
+        .shOnChange(of: now.track?.id) { refreshSnapshot() }
+    }
+
+    /// 从引擎拉一次队列快照(只读,不订阅)。切歌 / 出现 / 本页操作后调用。
+    private func refreshSnapshot() {
+        guard let e = engine else { return }
+        queue = e.queue
+        queueIndex = e.queueIndex
     }
 
     @ViewBuilder
     private func row(idx: Int, track: Track) -> some View {
-        let isCurrent = idx == playback.queueIndex
+        let isCurrent = idx == queueIndex
         HStack(spacing: 10) {
             // Leading: either an animated "now playing" indicator or the queue number
             ZStack {
                 if isCurrent {
-                    Image(systemName: playback.isPlaying ? "waveform" : "speaker.wave.2.fill")
+                    Image(systemName: now.isPlaying ? "waveform" : "speaker.wave.2.fill")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.accentColor)
-                        .variableColorEffect(isActive: playback.isPlaying)
+                        .variableColorEffect(isActive: now.isPlaying)
                 } else {
                     Text("\(idx + 1)")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -113,9 +134,9 @@ struct QueueView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if isCurrent {
-                playback.togglePlayPause()
+                engine?.togglePlayPause()
             } else {
-                playback.jump(to: idx)
+                engine?.jump(to: idx)
             }
         }
     }
@@ -124,10 +145,10 @@ struct QueueView: View {
     /// left, queue count on the right. Replaces the previous two-button design which
     /// duplicated controls the PlayerView already exposed.
     private var modeBar: some View {
-        let cycle = PlaybackCycleMode.current(shuffle: playback.shuffle, loop: playback.loopMode)
+        let cycle = PlaybackCycleMode.current(shuffle: now.shuffle, loop: now.loopMode)
         return HStack(spacing: 10) {
             Button {
-                cycle.advanced().apply(to: playback)
+                if let e = engine { cycle.advanced().apply(to: e) }
             } label: {
                 Label(cycle.label, systemImage: cycle.icon)
                     .font(.system(size: 13, weight: .semibold))
@@ -137,8 +158,8 @@ struct QueueView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            if !playback.queue.isEmpty {
-                Text("\(playback.queue.count) 首")
+            if !queue.isEmpty {
+                Text("\(queue.count) 首")
                     .font(DS.Typo.numeric)
                     .foregroundStyle(DS.Palette.textTertiary)
             }

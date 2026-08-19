@@ -23,6 +23,16 @@ struct ScriptManagerView: View {
 
     var body: some View {
         List {
+            // 加载失败/切换失败的错误提示 —— 之前只在导入表单里显示,列表页
+            // 重载失败(网络问题等)完全无感知。放列表顶部,出错了才出现。
+            if let loadErr = sources.lastError {
+                Section {
+                    Label(loadErr, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .onTapGesture { sources.lastError = nil }
+                }
+            }
             if scripts.scripts.isEmpty {
                 ShUnavailableView(
                     title: "暂无自定义脚本",
@@ -267,9 +277,15 @@ struct ScriptManagerView: View {
             }
             let script = ScriptStore.parseMetadata(from: raw)
             scripts.add(script)
-            await sources.load(script: script)
-            showImport = false
-            reset()
+            let loaded = await sources.load(script: script)
+            if loaded {
+                showImport = false
+                reset()
+            } else {
+                // 脚本进了列表但加载失败 —— 明确告诉用户,别静默关掉表单。
+                // (load 失败原因已写入 sources.lastError,这里转成表单内提示)
+                self.error = sources.lastError ?? "脚本加载失败,请检查脚本内容"
+            }
         } catch {
             self.error = error.localizedDescription
         }

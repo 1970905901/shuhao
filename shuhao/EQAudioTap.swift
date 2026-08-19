@@ -30,6 +30,19 @@ final class EQAudioTap: ObservableObject {
     private var tap: MTAudioProcessingTap?
     private var displayLink: CADisplayLink?
 
+    deinit {
+        // ⚠️ 必须 invalidate:displayLink 被 runloop 强持有,不 invalidate 的话,
+        // 每次播放会话创建的 EQAudioTap 都会泄漏一个 60Hz 常驻循环(空转烧 CPU)。
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    /// 显式停掉电平平滑(引擎替换 tap 时调用,deinit 兜底,双保险)。
+    func stopLevelSmoothing() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
     /// Mutable processing state. Lives outside any actor — touched from the
     /// audio thread inside the C callbacks below.
     final class State {
@@ -107,15 +120,14 @@ final class EQAudioTap: ObservableObject {
     /// a `@Published` write inside the audio thread (it ManagedObservableObject
     /// touches main-actor) so we sample on the main runloop instead.
     ///
-    /// ⚠️ 暂时停用:这个 displayLink 在**主线程**每帧 tick(60Hz)做电平平滑,
-    /// 是播放全程常驻的主线程负载之一。而音浪组件(AudioWave)已从播放页删除,
-    /// 现在没有任何消费者读 `level`/`AudioLevel` —— 纯浪费。等以后要恢复音浪
-    /// 可视化时,把下面三行取消注释即可。
+    /// 播放页音浪(AudioWave)已回归,恢复 displayLink 提供真实 RMS 电平。
+    /// 开销可控:只更新 AudioLevel.shared(唯一观察者是音浪组件本身,
+    /// 播放器关闭时没有任何视图在观察它,`@Published` 写无副作用)。
     private func startLevelSmoothing() {
-        // let link = CADisplayLink(target: DisplayLinkProxy(owner: self),
-        //                          selector: #selector(DisplayLinkProxy.tick))
-        // link.add(to: .main, forMode: .common)
-        // displayLink = link
+        let link = CADisplayLink(target: DisplayLinkProxy(owner: self),
+                                 selector: #selector(DisplayLinkProxy.tick))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
     }
 
     fileprivate func tick() {

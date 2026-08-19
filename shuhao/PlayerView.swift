@@ -392,6 +392,13 @@ struct PlayerView: View {
                         .padding(.top, DS.Spacing.xl)
                         .animation(DS.Motion.standard, value: now.currentAudioSpec)
                         .animation(DS.Motion.standard, value: engine?.displayQuality)
+
+                        // 播放音浪:黑胶旋转之外的第二重视觉反馈。只占 68pt,
+                        // active 时 TimelineView 以 60Hz 只在自身内部刷新,不牵连整页。
+                        AudioWave(active: now.isPlaying && !now.isBuffering)
+                            .frame(height: 64)
+                            .padding(.horizontal, 4)
+                            .padding(.top, DS.Spacing.l)
                     }
                     .id(track.id)
                     .transition(.asymmetric(
@@ -503,19 +510,37 @@ private final class VinylRecordView: UIView {
         guard on != spinning else { return }
         spinning = on
         if on {
-            // 从当前角度继续转;每圈结束(角度+2π)回到起点,+2π 整圈跳变不可见,无缝。
-            let anim = CABasicAnimation(keyPath: "transform.rotation.z")
-            anim.fromValue = currentAngle
-            anim.toValue = currentAngle + 2 * .pi
-            anim.duration = 12
-            anim.repeatCount = .infinity
-            layer.add(anim, forKey: "spin")
+            startSpin()
         } else {
-            // 冻结在当前角度:把 presentation 层角度写回模型层再移除动画
-            currentAngle = Double(layer.presentation()?.value(forKeyPath: "transform.rotation.z") as? CGFloat ?? 0)
-            layer.removeAnimation(forKey: "spin")
-            layer.setValue(currentAngle, forKeyPath: "transform.rotation.z")
+            freezeSpin()
         }
+    }
+
+    /// ⚠️ 播放器关闭再打开时,视图重新挂上窗口,但 CABasicAnimation 已随图层
+    /// 离开渲染树而失效 —— 之前 spinning 仍是 true,`setSpinning` 的 guard 直接
+    /// return,动画永远不重挂,表现为"黑胶停转"。
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil, spinning, layer.animation(forKey: "spin") == nil {
+            startSpin()
+        }
+    }
+
+    /// 从当前角度继续转;每圈结束(角度+2π)回到起点,+2π 整圈跳变不可见,无缝。
+    private func startSpin() {
+        let anim = CABasicAnimation(keyPath: "transform.rotation.z")
+        anim.fromValue = currentAngle
+        anim.toValue = currentAngle + 2 * .pi
+        anim.duration = 12
+        anim.repeatCount = .infinity
+        layer.add(anim, forKey: "spin")
+    }
+
+    /// 冻结在当前角度:把 presentation 层角度写回模型层再移除动画
+    private func freezeSpin() {
+        currentAngle = Double(layer.presentation()?.value(forKeyPath: "transform.rotation.z") as? CGFloat ?? 0)
+        layer.removeAnimation(forKey: "spin")
+        layer.setValue(currentAngle, forKeyPath: "transform.rotation.z")
     }
 
     func setCover(url: String?) {

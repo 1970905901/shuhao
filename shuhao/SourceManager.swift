@@ -62,7 +62,12 @@ final class SourceManager: ObservableObject {
         }
     }
 
-    func load(script: UserScript) async {
+    /// 加载脚本并返回是否成功。失败原因写入 `lastError`,供 UI 展示。
+    /// ⚠️ 之前签名是 `-> Void`,导入表单在 load 失败时**没有任何提示**就关闭了
+    /// (脚本被 add 进列表但实际没加载,界面上既没报错也没勾选) —— 这就是
+    /// "本地脚本导入老样子"的直接原因之一。现在返回 Bool,调用方必须展示错误。
+    @discardableResult
+    func load(script: UserScript) async -> Bool {
         isLoading = true
         defer { isLoading = false }
         do {
@@ -78,9 +83,11 @@ final class SourceManager: ObservableObject {
             let caps = try await runtime.waitForInit(timeout: 10)
             loadedScripts.removeAll { $0.script.id == script.id }
             loadedScripts.append(LoadedScript(id: script.id, script: script, runtime: runtime, capabilities: caps))
+            return true
         } catch {
             lastError = "加载脚本失败: \(error.localizedDescription)"
             print("[SourceManager] load failed: \(error)")
+            return false
         }
     }
 

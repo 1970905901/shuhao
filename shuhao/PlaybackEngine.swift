@@ -403,6 +403,7 @@ final class PlaybackEngine: ObservableObject {
         // (when toggled on) and RMS for AudioWave. AVMutableAudioMixInputParameters
         // can only carry one audioTapProcessor, so combining the two roles is
         // not a nicety, it's a hard requirement.
+        audioTap?.stopLevelSmoothing()   // 停掉旧 tap 的 60Hz displayLink,防泄漏
         let tap = EQAudioTap()
         self.audioTap = tap
         if let s = eqStore?.settings {

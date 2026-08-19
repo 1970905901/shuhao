@@ -17,7 +17,6 @@ struct MvPlayerView: View {
     let initialInfo: MusicVideoInfo
     let onClose: () -> Void
 
-    @EnvironmentObject var playback: PlaybackEngine
     @State private var track: Track
     @State private var info: MusicVideoInfo
     @State private var selectedQualityIndex = 0
@@ -25,6 +24,11 @@ struct MvPlayerView: View {
     @State private var loading = false
     @State private var showQueueSheet = false
     @State private var errorMessage: String?
+
+    // ⚠️ 刻意不观察 PlaybackEngine:它的 currentTime 每 0.25 秒发布一次,观察它就
+    // 等于让全屏 MV 页面每秒重建 4 次(视频播放中非常伤)。要读队列 / 暂停音频时
+    // 经 AppServices 取引擎指令(取值,非观察)。
+    private var engine: PlaybackEngine? { AppServices.shared.playback }
 
     // Playback observation
     @State private var isPlaying = true
@@ -48,7 +52,7 @@ struct MvPlayerView: View {
 
     /// Tracks in the playback queue that carry an mvId hint. Used by prev/next.
     private var mvQueue: [Track] {
-        playback.queue.filter { $0.extras["mvId"]?.isEmpty == false }
+        engine?.queue.filter { $0.extras["mvId"]?.isEmpty == false } ?? []
     }
 
     private var currentIndex: Int {
@@ -336,7 +340,8 @@ struct MvPlayerView: View {
     // MARK: - State actions
 
     private func startup() {
-        if playback.isPlaying { playback.pause() }
+        // 看 MV 时暂停音频 —— 经引擎取指令,不观察
+        if let e = engine, e.isPlaying { e.pause() }
         mount(url: info.bestUrl())
         scheduleHide()
     }
