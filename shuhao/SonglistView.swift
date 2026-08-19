@@ -87,7 +87,8 @@ struct SonglistView: View {
         }
         .brandedSurface()
         .navigationTitle("歌单")
-        .navigationBarTitleDisplayMode(.large)
+        // 大标题把内容压得很低,改 inline 让内容贴近状态栏。
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: SonglistInfo.self) { info in
             SonglistDetailView(info: info)
         }

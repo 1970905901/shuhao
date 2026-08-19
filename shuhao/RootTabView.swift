@@ -158,11 +158,13 @@ struct RootTabView: View {
         }
     }
 
-    /// 用户拖动越过阈值后由 PlayerView 调来。滑出动画交给 isOpen=false 驱动,
-    /// 动画跑完(约 0.55s)再卸载本视图 —— 此时它已整屏离屏,卸载无缝。
+    /// 用户左缘右滑越过阈值后由 PlayerView 调来。滑出动画交给 isOpen=false 驱动
+    /// (向右飞出,见 PlayerView 的 offset),动画跑完再卸载本视图 —— 此时它已在
+    /// 屏幕右缘外,卸载无缝。
     private func dismissPlayer() {
         let token = playerToken
-        withAnimation(PlayerView.playerSpring) { playerOpen = false }
+        // 关闭用更短阻尼的弹簧,右滑跟手、收得干脆(进场仍用 playerSpring 从右缘滑入)。
+        withAnimation(PlayerView.playerCloseSpring) { playerOpen = false }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
             // 这 0.55s 内若又重开,playerToken 会变,就不卸载刚重开的播放器。
             if token == playerToken { playerMounted = false }

@@ -47,7 +47,8 @@ struct LeaderboardView: View {
         }
         .brandedSurface()
         .navigationTitle("排行榜")
-        .navigationBarTitleDisplayMode(.large)
+        // 大标题把内容压得很低,改 inline 让内容贴近状态栏。
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: BoardInfo.self) { board in
             BoardDetailView(board: board)
         }

@@ -73,7 +73,8 @@ struct SearchView: View {
         }
         .brandedSurface()
         .navigationTitle("搜索")
-        .navigationBarTitleDisplayMode(.large)
+        // 大标题把搜索栏压得很低(距状态栏一大截),改 inline 让内容贴近状态栏。
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: - Bar

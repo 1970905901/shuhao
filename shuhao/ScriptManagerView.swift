@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit  // UIDocumentPickerViewController (ScriptFilePicker)
 import UniformTypeIdentifiers
 
 struct ScriptManagerView: View {
@@ -152,22 +153,18 @@ struct ScriptManagerView: View {
                     inputText = ""; pickedFileName = nil; error = nil
                 }
             }
-            // ⚠️ .fileImporter 必须挂在 sheet 内容的根(NavigationStack)上,不能藏在
-            // 里头的 Form 里。iOS 16/17 上 .fileImporter 嵌在 Form/Section 里时,系统
-            // 文档选择器能正常打开、能浏览文件,但点选 .js / .json 这类"非 document"
-            // 类型文件时,选择器不关闭、回调不触发,表现为"点了没反映"。
-            // 挂到 NavigationStack(本弹窗内容根)上,选择器能拿到稳定的呈现上下文,
-            // 选完正常 dismiss 并把 URL 传回来。
-            //
-            // 另:`allowedContentTypes` 不要带 `.data` —— 它是动态通配类型,跟具体
-            // 类型混用会让 iOS 文档选择器在选非 document 文件时选不中。脚本就是脚本,
-            // 限定到 .js / 文本类即可。
-            .fileImporter(
-                isPresented: $showFileImporter,
-                allowedContentTypes: [.javaScript, .text, .plainText, .json],
-                allowsMultipleSelection: false
-            ) { result in
-                loadPickedFile(result)
+            // ⚠️ 从本地选脚本文件不走 SwiftUI 的 `.fileImporter` —— iOS 16/17 上它
+            // 嵌在 sheet 里时,系统文档选择器能打开、能浏览文件,但点选 .js/.json
+            // 这类"非 document"类型文件时选择器不关闭、回调不触发,表现为"点了
+            // 没反映"(已踩坑:挂 Form 上不行、挂 NavigationStack 上也不行,去掉
+            // .data 也不行)。换成 UIKit 的 UIDocumentPickerViewController 直连呈现,
+            // 选中/取消都走 UIDocumentPickerDelegate,完全绕开 SwiftUI 那层。
+            .fullScreenCover(isPresented: $showFileImporter) {
+                ScriptFilePicker { result in
+                    showFileImporter = false
+                    loadPickedFile(result)
+                }
+                .ignoresSafeArea()
             }
     }
 
@@ -203,6 +200,9 @@ struct ScriptManagerView: View {
             inputText = text
             pickedFileName = url.lastPathComponent
         } catch {
+            // 用户主动取消选择器不算错误,别把 "cancelled" 显示成红色报错。
+            let e = error as NSError
+            if e.domain == NSURLErrorDomain && e.code == NSURLErrorCancelled { return }
             self.error = error.localizedDescription
         }
     }
@@ -240,6 +240,49 @@ struct ScriptManagerView: View {
             reset()
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - UIKit 文档选择器
+
+/// 用 UIKit 的 `UIDocumentPickerViewController` 实现"从本地选脚本文件"。
+///
+/// 为什么不用 SwiftUI 的 `.fileImporter`:iOS 16/17 上 `.fileImporter` 嵌在 sheet 里时,
+/// 系统文档选择器能打开、能浏览文件,但点选 `.js` / `.json` 这类"非 document"类型
+/// 文件时选择器不关闭、回调不触发,表现为"点了没反映"(把修饰符挂到 sheet 内容根、
+/// 去掉 `.data` 通配类型都无效)。换成 UIKit 直连呈现,选中/取消都走
+/// `UIDocumentPickerDelegate`,完全绕开 SwiftUI 那层对文档选择的处理。
+struct ScriptFilePicker: UIViewControllerRepresentable {
+    let onPick: (Result<URL, Error>) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(
+            forOpeningContentTypes: [.javaScript, .text, .plainText, .json]
+        )
+        picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onPick: (Result<URL, Error>) -> Void
+        init(onPick: @escaping (Result<URL, Error>) -> Void) { self.onPick = onPick }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            if let url = urls.first {
+                onPick(.success(url))
+            } else {
+                onPick(.failure(URLError(.cannotOpenFile)))
+            }
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            onPick(.failure(URLError(.cancelled)))
         }
     }
 }
