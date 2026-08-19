@@ -183,7 +183,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 
 ## 🔀 与原仓库差异
 
-本项目由原仓库 **[1970905901/walkman](https://github.com/1970905901/walkman)**（随便听 · 三端播放器）fork 而来，在保留其 **lx-music v4 自定义源协议、四平台直连、8 级音质、下载/本地导入、播放内核** 等核心能力的基础上，针对 **iPhone 单端体验** 做了大量定制与精简。以下是全部差异，按类别列出并注明目的与影响。
+本项目由原仓库 **[SincereXing/walkman](https://github.com/SincereXing/walkman)**（随便听 · 三端播放器）fork 而来，在保留其 **lx-music v4 自定义源协议、四平台直连、8 级音质、下载/本地导入、播放内核** 等核心能力的基础上，针对 **iPhone 单端体验** 做了大量定制与精简。以下是全部差异，按类别列出并注明目的与影响。
 
 ### 品牌与标识
 
@@ -193,7 +193,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | 应用图标 | 紫粉渐变双音符（PDF 抽帧） | **白底粉色音符**（用户提供原图） | 按用户设计稿定制 |
 | Bundle ID | `com.heartbeat.walkman` | **`shuhao.com`** | 独立应用身份,避免与原仓库签名冲突 |
 | App Group | `group.com.heartbeat.walkman` | `group.shuhao.com` | 随 Bundle ID 同步 |
-| 版本号 | — | **2.0**（build 26） | 里程碑版本 |
+| 版本号 | — | **2.0**（build 28） | 里程碑版本 |
 
 ### 平台与工程配置
 
@@ -209,7 +209,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 
 | 功能 | 说明 | 目的 / 影响 |
 |---|---|---|
-| **网易云黑胶唱片播放页** | 封面改为黑胶唱片样式（黑色碟身 + 同心纹 + 中心圆形封面）,播放时 CALayer GPU 驱动匀速旋转,暂停冻结当前角度 | 替代原"矩形封面 + 音浪"方案,视觉更接近主流音乐 App;旋转完全走 UIKit 图层,主线程零开销 |
+| **黑胶唱片播放页（iPhone 全屏）** | 封面改为网易云黑胶唱片样式（黑色碟身 + 同心纹 + 中心圆形封面）,播放时 CALayer GPU 驱动匀速旋转,暂停冻结当前角度 | 原仓库黑胶唱盘仅 iPad 布局使用;iPhone 端改为全屏黑胶唱片,视觉更接近主流音乐 App;旋转走 UIKit 图层,主线程零开销 |
 | **在线歌单全量导入增强** | 保留原仓库的两步接口 + 分批写入 | 与上游一致,千首大歌单不卡顿 |
 
 ### 行为变更
