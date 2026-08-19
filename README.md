@@ -46,7 +46,7 @@
 | **资料库** | 继续听、最近播放、我的歌单、听歌报告（播放统计）；歌单 iCloud 多端同步 |
 | **下载** | 多音质下载，按 `歌手/专辑/曲目` 目录整理，内嵌完整元数据（标题/歌手/专辑/封面/歌词） |
 | **本地导入** | 选择文件夹递归扫描导入本地音乐，自动读取内嵌标签 |
-| **播放页** | 封面取色动态背景、网易云黑胶唱片（CALayer 旋转）、滚动歌词、**实测音频规格标注**（如 `FLAC 24bit/44.1kHz`，探测自真实流而非接口宣称） |
+| **播放页** | 封面取色动态背景、网易云黑胶唱片（静态）、滚动歌词、**实测音频规格标注**（如 `FLAC 24bit/44.1kHz`，探测自真实流而非接口宣称） |
 | **播放能力** | 10 段 EQ 均衡器、AirPlay、睡眠定时、后台播放、锁屏/控制中心/CarPlay 控件、MV 播放 |
 | **系统集成** | Siri / App Shortcuts（"用 shuhao music 播放晴天"） |
 | **设置 / 自定义源** | 音质偏好，URL / 粘贴 / 文件三种方式导入管理 lx-music v4 脚本 |
@@ -193,7 +193,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | 应用图标 | 紫粉渐变双音符（PDF 抽帧） | **白底粉色音符**（用户提供原图） | 按用户设计稿定制 |
 | Bundle ID | `com.heartbeat.walkman` | **`shuhao.com`** | 独立应用身份,避免与原仓库签名冲突 |
 | App Group | `group.com.heartbeat.walkman` | `group.shuhao.com` | 随 Bundle ID 同步 |
-| 版本号 | — | **2.0**（build 28） | 里程碑版本 |
+| 版本号 | — | **2.0**（build 30） | 里程碑版本 |
 
 ### 平台与工程配置
 
@@ -209,7 +209,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 
 | 功能 | 说明 | 目的 / 影响 |
 |---|---|---|
-| **黑胶唱片播放页（iPhone 全屏）** | 封面改为网易云黑胶唱片样式（黑色碟身 + 同心纹 + 中心圆形封面）,播放时 CALayer GPU 驱动匀速旋转,暂停冻结当前角度 | 原仓库黑胶唱盘仅 iPad 布局使用;iPhone 端改为全屏黑胶唱片,视觉更接近主流音乐 App;旋转走 UIKit 图层,主线程零开销 |
+| **黑胶唱片播放页（iPhone 全屏）** | 封面改为网易云黑胶唱片样式（黑色碟身 + 同心纹 + 中心圆形封面）,**静态不旋转**（用户明确要求关闭旋转） | 原仓库黑胶唱盘仅 iPad 布局使用;iPhone 端改为全屏黑胶唱片,视觉更接近主流音乐 App;静态化后彻底消除"暂停/播放时黑胶循环变大变小"的旋转跳变 |
 | **在线歌单全量导入增强** | 保留原仓库的两步接口 + 分批写入 | 与上游一致,千首大歌单不卡顿 |
 
 ### 行为变更
@@ -220,7 +220,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | 听歌识曲 | 搜索栏 ShazamKit 按钮 + 识别页 | **已整体移除**（含 `SongRecognizer`/`RecognizeView`/麦克风权限） | 用户明确要求删除;移除 `NSMicrophoneUsageDescription`,不再申请麦克风权限 |
 | 播放音浪（AudioWave） | 播放页实时音浪 | **已整体移除**（含 `AudioLevel` 单例、RMS 计算、displayLink） | 用户明确要求删除;移除 60Hz 电平刷新,播放更省电 |
 | 锁屏/车机歌词 | 设置项"用专辑栏显示歌词",锁屏专辑栏随进度显示歌词 | **已整体移除**（含设置开关、`nowPlayingAlbumText`、歌词同步 watcher） | 用户明确要求删除;锁屏专辑栏恢复显示专辑名 |
-| 迷你播放器与 Tab 间距 | 距离较大 | **精确 2mm**（12.8pt）,并修复测量死区 | 用户要求;悬浮条紧贴 Tab 栏上方 |
+| 迷你播放器与 Tab 间距 | 距离较大 | **几乎无缝细缝**（1pt）,并按安全区计算（不依赖 findTabBar 递归） | 用户要求;悬浮条紧贴 Tab 栏上方,仅留发丝细缝 |
 | 播放器进出场动画 | 弹簧 + 跟手位移 | **easeOut + 纯 transform**（无中间态） | 整屏重视图上弹簧逐帧插值易卡;easeOut 平滑干脆 |
 | 打开播放器 | 强制深色 scheme（污染整窗） | **移除强制深色**,显式深色背景 | 修复"打开播放器整窗变黑、底部 tab 变透明" |
 | 设置页 | 内嵌在"我的"页 | **独立底部 Tab**（第 5 个） | 设置入口更直接 |
@@ -230,6 +230,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | 项 | 原仓库（walkman） | 本项目（shuhao music） | 目的 / 影响 |
 |---|---|---|---|
 | AppIcon 资源 | 三槽同图（light/dark/tinted 彩色） | **单 universal 1024 槽**（用户提供的单色图） | 规避 iOS 17+ 对 tinted 槽彩色图的校验,防止回退系统占位图标 |
+| 启动画面 | LaunchScreen 深蓝底+旧音符全屏图;应用内 SplashView 读 `UIImage(named:"AppIcon")` | **LaunchScreen 纯色背景**;SplashView 读 `icon-1024.png`(当前图标) | 修复启动时闪现旧版图标;启动链全程图标一致 |
 | `NSMicrophoneUsageDescription` | 存在 | **已删除** | 听歌识曲移除后不再需要 |
 | `NSUserActivityTypes` 的 `INPlayMediaIntent` | 存在（SiriKit 播放意图） | **已删除** | `SiriPlayMediaHandler` 随 AppDelegate 移除,老式 INPlayMediaIntent 不再注册 |
 | 音频会话 | 播放 + EQ | 播放 + EQ（RMS/音浪相关移除） | 同上 |
@@ -239,12 +240,13 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | 项 | 说明 | 目的 / 影响 |
 |---|---|---|
 | **4Hz 观察摘除** | 摘除 8+ 个视图对 `PlaybackEngine` 的直接观察,改走 `AppServices.shared` 取指令 + `NowPlayingBar` 低频镜像 | 播放中视图不再随 `currentTime` 每秒重建 4 次,掉帧大幅减少 |
-| **黑胶旋转 GPU 化** | `TimelineView` 30fps SwiftUI 重绘 → CALayer `CABasicAnimation` | 主线程零开销,进出场动画不再被拖累 |
+| **黑胶静态化** | 黑胶唱片**不旋转**,仅展示静态唱片外观（用户明确要求） | 彻底消除"暂停/播放循环变大变小"的视觉跳变;无旋转状态切换,无 transform/布局叠加 |
 | **锁屏信息节流** | `MPNowPlayingInfoCenter` 写入 4Hz → 1Hz（歌词行切换时强制刷） | 跨进程 XPC 写入从 4Hz 降到 1Hz,播放中开合动画不卡 |
 | **进度发布 2Hz** | `periodicTimeObserver` 0.25s → 0.5s | 进度条/歌词每秒重建减半 |
-| **黑胶旋转状态** | 不再掺 `isBuffering`（缓冲抖动会反复启停 CAAnimation） | 网络缓冲抖动时黑胶保持旋转,不闪停 |
 | **设置页 Form → List** | 设置页原用 `Form`（唯一一页） | `Form + scrollContentBackground(.hidden) + 全屏渐变` 在 iOS 16 滚动掉帧,改 `List` 后与其它 tab 一致 |
-| **transition 去 scale** | 封面切换 `.scale(0.96)` 过渡 | 暂停/播放时 body 重建会重放 scale 过渡 → 黑胶"循环变大变小",改纯淡入淡出 |
+| **coverPage 布局稳定化** | 封面容器改 ZStack 固定居中,去掉 Spacer 弹性布局与 scale 过渡 | body 重建（暂停/播放）时黑胶位置/尺寸纹丝不动 |
+| **迷你播放器测量系统化** | 高度改系统 API 计算（49pt + 安全区）,不再 findTabBar 递归遍历 | 各 iOS 版本/机型都精确,不再因层级变化导致间距失效 |
+| **启动图标一致性** | LaunchScreen 改纯色背景;SplashView logo 读当前 icon-1024.png | 修复启动时闪现旧版图标;启动页与主屏图标严格一致 |
 | **死代码清理** | 清理 `ContentView`、`SiriPlayMediaHandler`、`GridCard`、`ShadowSpec`、未用方法等 | 纯减法,功能不变,包体更小 |
 | **常驻观察者 deinit** | `PlaybackEngine` 无 deinit | 补充 deinit 摘除 3 个常驻 NotificationCenter 观察者,消除 token 悬挂 |
 
