@@ -33,7 +33,6 @@ struct SearchView: View {
     @State private var resultsByScope: [SearchScope: [Track]] = [:]
     @State private var loadingScopes: Set<SearchScope> = []
     @State private var error: String?
-    @State private var showRecognize = false
     @FocusState private var searchFocused: Bool
 
     private let tabs: [SearchScope] = [
@@ -75,12 +74,6 @@ struct SearchView: View {
         .brandedSurface()
         .navigationTitle("搜索")
         .navigationBarTitleDisplayMode(.large)
-        .sheet(isPresented: $showRecognize) {
-            RecognizeView { term in
-                keyword = term
-                searchAll()
-            }
-        }
     }
 
     // MARK: - Bar
@@ -107,15 +100,6 @@ struct SearchView: View {
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            Button {
-                showRecognize = true
-            } label: {
-                Image(systemName: "shazam.logo.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(DS.Palette.brandGradient)
-            }
-            .accessibilityLabel("听歌识曲")
 
             if searchFocused || !keyword.isEmpty {
                 Button("取消") {
