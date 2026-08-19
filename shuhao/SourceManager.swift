@@ -3,14 +3,12 @@ import Combine
 
 enum ResolveOrigin: Equatable, Sendable {
     case script(name: String)
-    case directFallback
     case otherSource(SourceID)
     case localFile
 
     var displayLabel: String {
         switch self {
         case .script(let name): return "脚本: \(name)"
-        case .directFallback: return "内置直连"
         case .otherSource(let s): return "换源: \(s.displayName)"
         case .localFile: return "本地"
         }
@@ -18,7 +16,6 @@ enum ResolveOrigin: Equatable, Sendable {
     var iconName: String {
         switch self {
         case .script: return "doc.text.fill"
-        case .directFallback: return "bolt.horizontal.fill"
         case .otherSource: return "arrow.triangle.2.circlepath"
         case .localFile: return "internaldrive.fill"
         }
@@ -37,7 +34,6 @@ final class SourceManager: ObservableObject {
     @Published private(set) var loadedScripts: [LoadedScript] = []
     @Published private(set) var isLoading: Bool = false
     @Published var lastError: String?
-    @Published var fallbackEnabled: Bool = true
 
     struct LoadedScript: Identifiable {
         let id: UUID
@@ -159,17 +155,7 @@ final class SourceManager: ObservableObject {
         if let resolved = await tryOtherSources(for: track, preferred: preferred) {
             return resolved
         }
-        // 3) Direct fallback (kw/wy only) — non-official, but useful when no scripts cover anything.
-        if fallbackEnabled {
-            let qForFallback: Quality = track.qualities.contains(preferred) ? preferred : (track.qualities.first ?? .k128)
-            do {
-                let resolved = try await BuiltInResolver.resolve(track: track, quality: qForFallback)
-                print("[SourceManager] resolved via direct fallback => \(resolved.url.host ?? "?")\(resolved.warning.map { " ⚠ \($0)" } ?? "")")
-                return ResolvedTrack(url: resolved.url, origin: .directFallback, quality: qForFallback, warning: resolved.warning)
-            } catch {
-                // fall through
-            }
-        }
+        // (内置直连兜底已删除:脚本解析失败时直接报错,不再静默落到平台直连)
         if pickScript(for: track.source, action: "musicUrl") == nil {
             throw SourceError.noScriptForSource(track.source)
         }

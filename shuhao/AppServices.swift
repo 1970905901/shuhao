@@ -40,7 +40,6 @@ final class AppServices {
               let settings, let downloads, let history else { return }
         bootstrapped = true
 
-        sources.fallbackEnabled = settings.enableDirectFallback
         // Downloads reuse the same URL resolution as playback (script → other-source → direct).
         downloads.urlResolver = { [sources] track, quality in
             try await sources.resolveMusicURL(track: track, quality: quality).url
@@ -72,7 +71,7 @@ final class AppServices {
                 let q = await MainActor.run { downloads.quality(for: track.id) } ?? .k320
                 return ResolvedTrack(url: local, origin: .localFile, quality: q, warning: nil)
             }
-            sources.fallbackEnabled = settings.enableDirectFallback
+
             // `qualityCap` is set by PlaybackEngine when AVPlayer rejects a higher format
             // (e.g. 24-bit Hi-Res FLAC). When set, we resolve at the lower quality instead.
             let q = await MainActor.run { playback.qualityCap } ?? settings.preferredQuality

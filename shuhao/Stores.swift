@@ -405,9 +405,6 @@ final class SettingsStore: ObservableObject {
     @Published var preferredQuality: Quality {
         didSet { UserDefaults.standard.set(preferredQuality.rawValue, forKey: "pref.quality") }
     }
-    @Published var enableDirectFallback: Bool {
-        didSet { UserDefaults.standard.set(enableDirectFallback, forKey: "pref.enableDirectFallback") }
-    }
     /// When on, the UI surfaces informational notices like "换源播放" / "已降级音质" / "已用 libFLAC 解码".
     /// Real playback errors are always shown regardless of this flag.
     @Published var showDebugNotices: Bool {
@@ -445,14 +442,6 @@ final class SettingsStore: ObservableObject {
     init() {
         let q = UserDefaults.standard.string(forKey: "pref.quality") ?? Quality.k320.rawValue
         self.preferredQuality = Quality(rawValue: q) ?? .k320
-        if UserDefaults.standard.object(forKey: "pref.enableDirectFallback") == nil {
-            // Default ON — the bundled v4.0.js script's API server only implements `checkUpdate`
-            // and 404s `/lxmusicv4/url/...`, so strict-script mode currently can't play anything.
-            // Users who deploy their own lx-music-api-server can disable this.
-            self.enableDirectFallback = true
-        } else {
-            self.enableDirectFallback = UserDefaults.standard.bool(forKey: "pref.enableDirectFallback")
-        }
         self.showDebugNotices = UserDefaults.standard.bool(forKey: "pref.showDebugNotices")  // default off
         if UserDefaults.standard.object(forKey: "pref.showLyricsOnNowPlaying") == nil {
             self.showLyricsOnNowPlaying = true  // default on
