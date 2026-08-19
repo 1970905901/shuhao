@@ -350,13 +350,17 @@ struct PlayerView: View {
                         VinylRecord(
                             coverURL: downloads.displayCoverURL(for: track),
                             // ⚠️ 只由 isPlaying 驱动,不掺 isBuffering:periodicTimeObserver
-                            // 每 0.25s 赋值一次 isBuffering,网络缓冲抖动时 true↔false 反复,
+                            // 每 0.5s 赋值一次 isBuffering,网络缓冲抖动时 true↔false 反复,
                             // 导致 setSpinning 反复移除/重挂 CAAnimation —— 播放中打开播放器
                             // 动画卡顿的直接元凶之一。缓冲时保持旋转(网易云同款行为)。
                             spinning: now.isPlaying,
                             fallback: artwork.primary
                         )
                         .frame(width: 320, height: 320)
+                        // ⚠️ 布局优先级:coverPage 是 VStack{Spacer; 内容; Spacer} 结构,
+                        // 暂停/播放时 isPlaying 变化触发 body 重建,若无 layoutPriority,
+                        // Spacer 可能挤压黑胶,造成"黑胶变小/变大"的视觉抖动。
+                        .layoutPriority(1)
                         .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
 
                         VStack(spacing: 6) {
@@ -398,13 +402,15 @@ struct PlayerView: View {
                         .animation(DS.Motion.standard, value: engine?.displayQuality)
                     }
                     .id(track.id)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.96)),
-                        removal: .opacity
-                    ))
+                    // ⚠️ 只做淡入淡出,不做 scale:transition 的 .scale(0.96) 在
+                    // body 重建(暂停/播放时 isPlaying 变化触发)时可能被重放,
+                    // 黑胶从 96% 缩放着放大 → 用户看到的"黑胶变小变大循环"。
+                    .transition(.opacity)
                 }
             }
-            .animation(DS.Motion.standard, value: now.track?.id)
+            // ⚠️ 不在 ZStack 上挂 .animation(value:):body 重建时的布局变化会被
+            // 这个动画捕获,把 Spacer 挤压/恢复也动画化,加剧黑胶抖动。换歌的
+            // 淡入淡出由上面的 .transition(.opacity) + .id(track.id) 自己驱动。
 
             Spacer()
         }

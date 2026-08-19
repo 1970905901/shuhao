@@ -178,12 +178,11 @@ struct ScriptManagerView: View {
                 if importMode == .file {
                     Section {
                         Button {
-                            // 关掉导入表单,再原生 present 文档选择器 —— 选择器从最干净的
-                            // 呈现上下文弹出,不经过 fullScreenCover 嵌套。选完自动导入。
-                            showImport = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                presentScriptPicker()
-                            }
+                            // ⚠️ 不先关表单再弹:之前 showImport=false + 延迟 0.35s 再 present,
+                            // fullScreenCover 的 dismiss 动画未结束,present 被系统忽略 →
+                            // "点击按钮毫无反应"。现在直接在表单(fullScreenCover)之上原生
+                            // present,选择器叠在表单上,选完自动导入后表单自己关闭。
+                            presentScriptPicker()
                         } label: {
                             Label(pickedFileName ?? "选择脚本文件", systemImage: "doc.badge.plus")
                         }
