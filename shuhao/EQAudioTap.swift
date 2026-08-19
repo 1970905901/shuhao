@@ -1,15 +1,12 @@
 import Foundation
-import Combine
 import AVFoundation
 import CoreAudio       // UnsafeMutableAudioBufferListPointer — not transitive on Mac Catalyst
 import MediaToolbox
-import Accelerate
 import os.lock
-import UIKit  // CADisplayLink for level smoothing
 
-/// Real-time 5-band equalizer attached to an `AVPlayerItem` via
+/// Real-time 10-band equalizer attached to an `AVPlayerItem` via
 /// `MTAudioProcessingTap`. Implements each band as a single biquad and chains
-/// the 5 in series. Coefficients are recalculated every time the user moves a
+/// the 10 in series. Coefficients are recalculated every time the user moves a
 /// slider; the live audio thread reads them through an `os_unfair_lock`-guarded
 /// snapshot so we don't tear in the middle of a process callback.
 ///
@@ -20,28 +17,9 @@ import UIKit  // CADisplayLink for level smoothing
 /// arrays (z1, z2) per band — biquads are stateful and bleeding state across
 /// channels would create wrong stereo separation.
 @MainActor
-final class EQAudioTap: ObservableObject {
-
-    /// Smoothed RMS volume 0…1 — same role as the old `AudioLevelTap.level`.
-    /// EQAudioTap subsumes the level tap so we only install one
-    /// `MTAudioProcessingTap` per AVPlayerItem (the API only allows one).
-    @Published private(set) var level: Float = 0
+final class EQAudioTap {
 
     private var tap: MTAudioProcessingTap?
-    private var displayLink: CADisplayLink?
-
-    deinit {
-        // ⚠️ 必须 invalidate:displayLink 被 runloop 强持有,不 invalidate 的话,
-        // 每次播放会话创建的 EQAudioTap 都会泄漏一个 60Hz 常驻循环(空转烧 CPU)。
-        displayLink?.invalidate()
-        displayLink = nil
-    }
-
-    /// 显式停掉电平平滑(引擎替换 tap 时调用,deinit 兜底,双保险)。
-    func stopLevelSmoothing() {
-        displayLink?.invalidate()
-        displayLink = nil
-    }
 
     /// Mutable processing state. Lives outside any actor — touched from the
     /// audio thread inside the C callbacks below.
@@ -55,9 +33,6 @@ final class EQAudioTap: ObservableObject {
         var z2: [[Double]] = []
         var sampleRate: Double = 44_100
         var enabled: Bool = false
-        /// Latest RMS calculated by the process callback. Read on the main
-        /// thread via the smoothing displayLink.
-        var rawLevel: Float = 0
         /// **Heap-allocated** lock so the pointer is rock-stable across threads,
         /// independent of any Swift exclusivity / inout shenanigans around taking
         /// `&self.lock` on a class stored property. The audio thread and the main
@@ -112,31 +87,6 @@ final class EQAudioTap: ObservableObject {
 
     init() {
         setupTap()
-        startLevelSmoothing()
-    }
-
-    /// 60 Hz display link smooths the raw RMS into a "fast attack / slow
-    /// release" envelope — same logic the old AudioLevelTap had. We can't put
-    /// a `@Published` write inside the audio thread (it ManagedObservableObject
-    /// touches main-actor) so we sample on the main runloop instead.
-    ///
-    /// 播放页音浪(AudioWave)已回归,恢复 displayLink 提供真实 RMS 电平。
-    /// 开销可控:只更新 AudioLevel.shared(唯一观察者是音浪组件本身,
-    /// 播放器关闭时没有任何视图在观察它,`@Published` 写无副作用)。
-    private func startLevelSmoothing() {
-        let link = CADisplayLink(target: DisplayLinkProxy(owner: self),
-                                 selector: #selector(DisplayLinkProxy.tick))
-        link.add(to: .main, forMode: .common)
-        displayLink = link
-    }
-
-    fileprivate func tick() {
-        let boosted = min(1, state.rawLevel * 3.5)
-        if boosted > level {
-            level = level * 0.5 + boosted * 0.5     // fast attack
-        } else {
-            level = level * 0.85 + boosted * 0.15   // slow release
-        }
     }
 
     /// Mounts the tap onto the first audio track of `item`. Mirrors
@@ -218,7 +168,7 @@ final class EQAudioTap: ObservableObject {
                 let bufferList = UnsafeMutableAudioBufferListPointer(bufferListInOut)
                 let frames = Int(numberFramesOut.pointee)
 
-                // Pass 1: optional EQ (5-stage biquad chain). Skipped when the
+                // Pass 1: optional EQ (10-stage biquad chain). Skipped when the
                 // user has the master toggle off — preserves perfect bit-for-bit
                 // audio path for Hi-Res purists.
                 if s.enabled {
@@ -247,24 +197,6 @@ final class EQAudioTap: ObservableObject {
                         }
                     }
                 }
-
-                // Pass 2: RMS for AudioWave. Always runs — this used to live
-                // in AudioLevelTap, now merged so we only need one tap (the
-                // AVMutableAudioMixInputParameters audioTapProcessor field
-                // only carries one).
-                var sumOfSquares: Float = 0
-                var totalSamples: vDSP_Length = 0
-                for buffer in bufferList {
-                    guard let data = buffer.mData else { continue }
-                    let bytes = Int(buffer.mDataByteSize)
-                    let count = bytes / 4   // assume Float32 PCM
-                    let samples = data.bindMemory(to: Float.self, capacity: count)
-                    var rms: Float = 0
-                    vDSP_rmsqv(samples, 1, &rms, vDSP_Length(count))
-                    sumOfSquares += rms * rms
-                    totalSamples += vDSP_Length(count)
-                }
-                s.rawLevel = totalSamples > 0 ? min(1, sqrt(sumOfSquares)) : 0
             }
         )
 
@@ -341,12 +273,4 @@ final class EQAudioTap: ObservableObject {
         // Normalize by a0 so we don't need to track it in the inner loop.
         return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0]
     }
-}
-
-/// CADisplayLink can't directly weakly target a Swift class with a `weak`
-/// reference, so we hop through this proxy that holds the owner weakly.
-private class DisplayLinkProxy {
-    weak var owner: EQAudioTap?
-    init(owner: EQAudioTap) { self.owner = owner }
-    @objc func tick() { Task { @MainActor in owner?.tick() } }
 }

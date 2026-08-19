@@ -392,13 +392,6 @@ struct PlayerView: View {
                         .padding(.top, DS.Spacing.xl)
                         .animation(DS.Motion.standard, value: now.currentAudioSpec)
                         .animation(DS.Motion.standard, value: engine?.displayQuality)
-
-                        // 播放音浪:黑胶旋转之外的第二重视觉反馈。只占 68pt,
-                        // active 时 TimelineView 以 60Hz 只在自身内部刷新,不牵连整页。
-                        AudioWave(active: now.isPlaying && !now.isBuffering)
-                            .frame(height: 64)
-                            .padding(.horizontal, 4)
-                            .padding(.top, DS.Spacing.l)
                     }
                     .id(track.id)
                     .transition(.asymmetric(
@@ -724,82 +717,6 @@ private struct LyricsPageView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-// MARK: - Audio rhythm wave
-
-/// Horizontal flowing waveform: a few overlapping sine waves with different amplitude/wavelength/
-/// speed/opacity (the varying opacity gives the depth look). Drifts while playing, freezes on pause.
-///
-/// If `level > 0` is supplied it overrides the synthetic "beat" envelope — the
-/// waves then ride the *real* audio RMS sampled by `AudioLevelTap`. Falls back
-/// to the synthetic beat when level isn't available (e.g. audio tap couldn't
-/// install — happens on HLS or right at song-start before the asset loads).
-struct AudioWave: View {
-    var active: Bool
-    var color: Color = .white
-    /// 0…1, smoothed RMS。直接从独立的 AudioLevel 单例读取,避免 60Hz 更新波及其父视图
-    /// (之前 audioLevel 挂在 PlaybackEngine 上,每秒几十次触发全 app 重绘、造成掉帧)。
-    /// 0 means "use synthetic"。
-    @ObservedObject private var audioLevel = AudioLevel.shared
-    private var level: Float { audioLevel.value }
-
-    // (baseAmp fraction, wavelength, drift speed, pulse speed, pulse phase, max opacity, line width)
-    private let waves: [(amp: CGFloat, wl: CGFloat, drift: Double, pulse: Double, pPhase: Double, opacity: Double, width: CGFloat)] = [
-        (1.00, 235, 0.70, 2.6, 0.0, 0.45, 1.3),
-        (0.74, 165, 1.10, 3.4, 1.1, 0.85, 1.1),
-        (0.52, 125, 1.65, 4.3, 2.4, 0.32, 0.9),
-    ]
-
-    var body: some View {
-        TimelineView(.animation(paused: !active)) { timeline in
-            Canvas { ctx, size in
-                let t = timeline.date.timeIntervalSinceReferenceDate
-                let midY = size.height / 2
-                let W = size.width
-                for w in waves {
-                    let pulse: Double
-                    if level > 0.02 {
-                        // Real-audio path: amplitude follows live RMS. Floor at
-                        // 0.15 so the wave doesn't completely collapse during
-                        // quiet passages.
-                        pulse = max(0.15, Double(level))
-                    } else {
-                        // Synthetic fallback: two summed sines with a wide swing → snappy, music-like rise/fall
-                        let beat = 0.5 + 0.38 * sin(t * w.pulse + w.pPhase) + 0.22 * sin(t * w.pulse * 1.9 + w.pPhase * 1.7)
-                        pulse = max(0.08, beat)
-                    }
-                    // Clamp so the tallest peak always stays inside the view (no clipping). 0.92 leaves
-                    // a little headroom for the line width on top of the half-height.
-                    let amp = min(w.amp * CGFloat(pulse), 0.92) * size.height / 2
-                    let phase = t * w.drift * 2.2
-                    var path = Path()
-                    var x: CGFloat = 0
-                    func y(at x: CGFloat) -> CGFloat {
-                        // envelope: 0 at both ends, 1 in the middle → all lines converge at the edges
-                        let env = sin(Double(x / W) * .pi)
-                        return midY + CGFloat(sin(Double(x / w.wl) * 2 * .pi + phase)) * amp * CGFloat(env)
-                    }
-                    path.move(to: CGPoint(x: 0, y: y(at: 0)))
-                    while x <= W {
-                        path.addLine(to: CGPoint(x: x, y: y(at: x)))
-                        x += 2
-                    }
-                    // lighter at both ends, darker in the middle
-                    let grad = Gradient(stops: [
-                        .init(color: color.opacity(0), location: 0.0),
-                        .init(color: color.opacity(w.opacity), location: 0.5),
-                        .init(color: color.opacity(0), location: 1.0),
-                    ])
-                    ctx.stroke(path,
-                               with: .linearGradient(grad,
-                                                     startPoint: CGPoint(x: 0, y: midY),
-                                                     endPoint: CGPoint(x: W, y: midY)),
-                               lineWidth: w.width)
-                }
-            }
-        }
     }
 }
 
