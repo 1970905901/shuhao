@@ -32,12 +32,10 @@ struct PlayerView: View {
     @State private var loadingMv = false
     /// Toast-like message shown briefly after MV resolution fails / starts.
     @State private var mvNotice: String?
-    /// 是否处于"已展开"。由 RootTabView 用动画驱动:true 时停在原位(swipeBackOffset
-    /// 通常 0),false 时停靠在屏幕右缘外侧(x = 屏宽)。进出场都是纯 transform,
+    /// 是否处于"已展开"。由 RootTabView 用动画驱动:true 时停在原位(x=0),
+    /// false 时停靠在屏幕右缘外侧(x = 屏宽)。进出场都是纯 transform,
     /// SwiftUI 不会对本视图做快照过渡 —— 那正是关闭瞬间残留影的根因。
     @Binding var isOpen: Bool
-    /// 左缘向右滑的横向位移。跟随手指,松开后要么飞向右侧关闭,要么弹回原位。
-    @State private var swipeBackOffset: CGFloat = 0
 
     /// 进场动画(右缘滑入):用短促的 easeOut 而不是弹簧 —— 整屏重视图上弹簧的
     /// 逐帧非线性插值 + 回弹在"点开瞬间"最容易卡顿;easeOut(0.3) 平滑、帧数少、
@@ -108,43 +106,25 @@ struct PlayerView: View {
         // 关闭方式统一为一种:左缘向右滑(edge swipe-back)。收起状态固定停靠在
         // 屏幕右缘外侧 (x = 屏宽),打开时从右缘滑入 —— 整个播放器像"右缘的下一页",
         // 与右滑关闭的手势方向天然一致。
-        .offset(x: isOpen ? swipeBackOffset : UIScreen.main.bounds.width, y: 0)
-        // 左缘向右滑关闭,像 iOS NavigationStack 的返回手势。只在拖动起点落在左缘
-        // 24pt 内且横向位移大于纵向时激活 —— 否则会跟封面的 cover ↔ 歌词 横向翻页
-        // 冲突。拖过 100pt 或甩得够快就关闭,否则弹回。
+        // ⚠️ 不跟手:播放器只有"全开(x=0)"和"关闭动画中(飞向屏宽)"两种状态,
+        // 没有中间态,彻底杜绝"卡在小偏移(x≈30)"那种关闭 bug。
+        .offset(x: isOpen ? 0 : UIScreen.main.bounds.width, y: 0)
+        // 左缘向右滑关闭。起点落在左缘 60pt 内且横向位移大于纵向、超过 40pt 时
+        // 立即触发关闭 —— 没有跟手位移,也就不存在"拖到一半停住"的状态。
+        // (不要用 .highPriorityGesture:那会把整个播放器的横向手势全抢走,封面
+        //  ↔ 歌词翻页会失效。)
         .simultaneousGesture(
             DragGesture(minimumDistance: 12)
                 .onChanged { v in
-                    let startedAtEdge = v.startLocation.x < 24
+                    let startedAtEdge = v.startLocation.x < 60
                     let mostlyHorizontal = abs(v.translation.width) > abs(v.translation.height)
-                    if (startedAtEdge && mostlyHorizontal) || swipeBackOffset > 0 {
-                        swipeBackOffset = max(0, v.translation.width)
-                    }
-                }
-                .onEnded { _ in
-                    // 只按位移判定,不看 predictedEndTranslation —— 快速轻扫很容易让
-                    // 预测速度冲过阈值,意外把播放器关掉(表现为"我没想关它自己关了")。
-                    if swipeBackOffset > 100 {
+                    if startedAtEdge && mostlyHorizontal && v.translation.width > 40 {
                         onClose()
-                    } else {
-                        // 未越阈值时回弹:用确定的 easeOut 而不是 DS.Motion.standard(弹簧),
-                        // 保证在小位移(几像素到几十像素)时也能在一拍内干脆归零,
-                        // 不被"卡在小偏移"误认为没关闭。
-                        withAnimation(.easeOut(duration: 0.22)) { swipeBackOffset = 0 }
                     }
                 }
         )
-        // ⚠️ 这里只在"重开(isOpen 变 true)"时清零 swipeBackOffset —— 千万不能在
-        // 关闭(isOpen 变 false)时清零:关闭动画正从当前拖动位置(swipeBackOffset,
-        // 比如已拖到 150)平滑飞到屏宽,一旦此时清零,动画会从 x=0 起跳 —— 视觉上
-        // 播放器先回弹到最左边再飞出,就是用户看到的"关闭时顿挫/有 bug"。
-        .shOnChange(of: isOpen) {
-            if isOpen { swipeBackOffset = 0 }
-        }
         .shOnChange(of: now.track?.id) { sync() }
         .onAppear {
-            // 每次挂载(重新打开)都从干净位置开始,避免残留上次关闭时的位移。
-            swipeBackOffset = 0
             sync()
         }
         // All sheets below are forced back to the system's real color scheme +
