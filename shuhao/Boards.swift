@@ -240,9 +240,16 @@ nonisolated struct NetEaseBoardService: BoardService {
         let albumId = albumD.flatMap { $0["id"].map { String(describing: $0) } }
         let pic = albumD?["picUrl"] as? String
         let duration = (d["duration"] as? Int).map { $0 / 1000 }
+        // 音质映射修正:hMusic = 320k,sqMusic = FLAC,hrMusic = Hi-Res。
+        // 老的 hMusic → .flac 是错的(那是 320k 被误标成无损)。
+        // mMusic 是 192k,本 App 无此档,不映射;128k 已由 k128 兜底。
         var qs: [Quality] = [.k128]
-        if (d["mMusic"] as? [String: Any]) != nil { qs.append(.k320) }
-        if (d["hMusic"] as? [String: Any]) != nil { qs.append(.flac) }
+        if (d["hMusic"] as? [String: Any]) != nil { qs.append(.k320) }
+        if (d["sqMusic"] as? [String: Any]) != nil { qs.append(.flac) }
+        if (d["hrMusic"] as? [String: Any]) != nil { qs.append(.hires) }
+        // mvid > 0 表示该曲有 MV(排行榜来自 playlist/detail,会返回真实 mvid)。
+        var extras: [String: String] = [:]
+        if let mvid = d["mvid"] as? Int, mvid > 0 { extras["mvId"] = String(mvid) }
         return Track(
             id: Track.makeID(source: .wy, songmid: id),
             name: name,
@@ -253,7 +260,8 @@ nonisolated struct NetEaseBoardService: BoardService {
             songmid: id,
             duration: duration,
             picURL: pic,
-            qualities: qs
+            qualities: qs,
+            extras: extras
         )
     }
 }
