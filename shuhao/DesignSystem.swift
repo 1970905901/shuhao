@@ -464,17 +464,20 @@ final class ArtworkColors: ObservableObject {
             let cols = ArtworkColors.dominantColors(from: img)
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    self.primary = cols.primary
-                    self.secondary = cols.secondary
-                }
+                // ⚠️ 不用 withAnimation:封面取色完成时动画化 primary/secondary
+                // 会把整个 PlayerView body 里的颜色变化(黑胶 fallback/背景渐变)
+                // 一起带动画,切歌瞬间观感抖动。直接赋值,背景渐变由 SwiftUI
+                // 自身的 diff 平滑过渡。
+                self.primary = cols.primary
+                self.secondary = cols.secondary
             }
         }
     }
 
     func reset() {
         inflightURL = nil
-        withAnimation { primary = .accentColor; secondary = Color(.systemBackground) }
+        primary = .accentColor
+        secondary = Color(.systemBackground)
     }
 
     nonisolated static func dominantColors(from image: UIImage) -> (primary: Color, secondary: Color) {

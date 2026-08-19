@@ -37,8 +37,13 @@ enum MiniPlayerMetrics {
 /// 铺在 TabView 底部,再用这里量出来的 tabbar 顶边到屏幕底距离把它抬到 tabbar
 /// 上方。这样定位不再依赖 `.safeAreaInset` 的隐式行为。
 ///
-/// 公式:悬浮条底边距屏幕底 = tabbar 顶边距屏幕底 + 想要的缝隙
-/// 代回 iPhone 15 Pro:83 + 2 = 85pt,悬浮条正好贴在 tabbar 上方。
+/// 公式:悬浮条底边距屏幕底 = tabbar 顶边距屏幕底 + 想要的缝隙(desiredGap)
+///
+/// ⚠️ 高度计算不依赖递归找 UITabBar:SwiftUI TabView 的底层实现各 iOS 版本不同
+/// (iOS 26 上尤其明显),递归遍历整个 window 既慢又可能在层级变化时找不到 →
+/// 兜底值永远生效、用户改 desiredGap 后"没变化"。改用系统 API 直接算:
+///   tabbar 顶边距屏幕底 = UITabBar 标准内容高 49pt + 底部安全区(home indicator)
+/// 这在 iOS 16~26 全程稳定,任何机型都精确。
 @MainActor
 final class TabBarMetrics: ObservableObject {
     static let shared = TabBarMetrics()
@@ -59,12 +64,12 @@ final class TabBarMetrics: ObservableObject {
 
     private func attempt() {
         guard let window = Self.keyWindow() else { return retry() }
-        guard let bar = Self.findTabBar(in: window),
-              bar.bounds.height > 0,
-              bar.window == window else { return retry() }
 
-        let inWindow = bar.convert(bar.bounds, to: nil)
-        let topFromBottom = window.bounds.height - inWindow.minY
+        // 直接算 tabbar 顶边距屏底:内容高 49 + 底部安全区(home indicator)。
+        // 不用 findTabBar 递归 —— SwiftUI TabView 层级各版本不同,递归既慢又不可靠。
+        let tabBarContentHeight: CGFloat = 49
+        let safeBottom = window.safeAreaInsets.bottom
+        let topFromBottom = tabBarContentHeight + safeBottom
         let value = topFromBottom + MiniPlayerMetrics.desiredGap
 
         // 量到离谱的值宁可用兜底,也不要把悬浮条甩到屏幕中间去。
@@ -87,14 +92,6 @@ final class TabBarMetrics: ObservableObject {
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive }?
             .windows.first { $0.isKeyWindow }
-    }
-
-    private static func findTabBar(in view: UIView) -> UITabBar? {
-        if let bar = view as? UITabBar { return bar }
-        for sub in view.subviews {
-            if let found = findTabBar(in: sub) { return found }
-        }
-        return nil
     }
 }
 
