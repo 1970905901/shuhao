@@ -11,7 +11,7 @@
   <img alt="built with" src="https://img.shields.io/badge/built%20with-Claude%20Code-d97757">
 </p>
 
-[lx-music-mobile](https://github.com/lyswhut/lx-music-mobile)（洛雪音乐）的 iOS 生态复刻与再设计：保留 **lx-music v4 自定义源 JS 解析协议**，聚合 **酷我 / 网易云 / 酷狗 / QQ 音乐** 四平台的搜索、排行榜与歌单，扩展到 **8 级音质**（最高臻品母带），并深度接入苹果生态 —— Siri 点歌、ShazamKit 听歌识曲、AirPlay、iCloud 同步、锁屏/控制中心控件。
+[lx-music-mobile](https://github.com/lyswhut/lx-music-mobile)（洛雪音乐）的 iOS 生态复刻与再设计：保留 **lx-music v4 自定义源 JS 解析协议**，聚合 **酷我 / 网易云 / 酷狗 / QQ 音乐** 四平台的搜索、排行榜与歌单，扩展到 **8 级音质**（最高臻品母带），并深度接入苹果生态 —— Siri 点歌、AirPlay、iCloud 同步、锁屏/控制中心控件。
 
 > 🤖 本项目的**全部代码均由 [Claude Code](https://claude.com/claude-code) 生成**（含架构、UI、播放/下载/导入逻辑与本文档）。
 
@@ -46,9 +46,9 @@
 | **资料库** | 继续听、最近播放、我的歌单、听歌报告（播放统计）；歌单 iCloud 多端同步 |
 | **下载** | 多音质下载，按 `歌手/专辑/曲目` 目录整理，内嵌完整元数据（标题/歌手/专辑/封面/歌词） |
 | **本地导入** | 选择文件夹递归扫描导入本地音乐，自动读取内嵌标签 |
-| **播放页** | 封面取色动态背景、实时音浪、滚动歌词、**实测音频规格标注**（如 `FLAC 24bit/44.1kHz`，探测自真实流而非接口宣称） |
+| **播放页** | 封面取色动态背景、网易云黑胶唱片（CALayer 旋转）、滚动歌词、**实测音频规格标注**（如 `FLAC 24bit/44.1kHz`，探测自真实流而非接口宣称） |
 | **播放能力** | 10 段 EQ 均衡器、AirPlay、睡眠定时、后台播放、锁屏/控制中心/CarPlay 控件、MV 播放 |
-| **系统集成** | Siri / App Shortcuts（"用 shuhao music 播放晴天"）、ShazamKit 听歌识曲 |
+| **系统集成** | Siri / App Shortcuts（"用 shuhao music 播放晴天"） |
 | **设置 / 自定义源** | 音质偏好，URL / 粘贴 / 文件三种方式导入管理 lx-music v4 脚本 |
 
 ---
@@ -93,7 +93,7 @@
 ## 🎨 设计风格
 
 - **品牌色**：酒红 `#8B2440` → 古铜金 `#C18A4F` 渐变（主按钮 / 进度条 / 选中态），磁带米黄 `#E8C99A` 呼应 "Shuhao" 拟物元素；明暗双外观自适应。
-- **播放页封面驱动**：背景从封面取色渐变，配实时音浪、逐行滚动歌词；音质规格（`FLAC 24bit/44.1kHz`）实测标注。
+- **播放页封面驱动**：背景从封面取色渐变，配网易云黑胶唱片、逐行滚动歌词；音质规格（`FLAC 24bit/44.1kHz`）实测标注。
 - **平台辨识色**：酷我橙 / 酷狗蓝 / QQ 绿 / 网易红，用于 chip、卡片投影与占位图；音质角标同样有专属色阶（母带赤铜 / 全景声蓝 / Hi-Res 金 / 无损紫 / HQ 青绿）。
 - **iPhone 原生布局**：底部 tab + 全屏播放页——不套用 iPad / Mac 的视觉语言。
 - 统一设计 token（`DesignSystem.swift`）：32pt Heavy Rounded 大标题、8/12/18/28 四级圆角、系统化间距与阴影。
@@ -117,9 +117,9 @@
 ## 🛠 技术栈
 
 - **Swift 6** + **SwiftUI**（`-default-isolation=MainActor` 全局主隔离，数据/解析类型显式 `nonisolated + Sendable`）
-- **AVFoundation**（AVPlayer + MTAudioProcessingTap 实现 EQ/音浪）+ 内置 **libFLAC** Hi-Res 解码兜底
+- **AVFoundation**（AVPlayer + MTAudioProcessingTap 实现 10 段 EQ）+ 内置 **libFLAC** Hi-Res 解码兜底
 - **JavaScriptCore**（运行 lx v4 自定义源脚本）
-- **ShazamKit**（听歌识曲）、**App Intents / SiriKit**（Siri 点歌与快捷指令）
+- **App Intents / SiriKit**（Siri 点歌与快捷指令）
 - **Combine + ObservableObject** 状态管理；JSON 文件 + iCloud KVS（`NSUbiquitousKeyValueStore`）持久化/同步
 
 ---
@@ -136,7 +136,7 @@ shuhao/
 ├── SonglistImporter                      在线歌单链接解析与全量导入
 ├── Stores / CloudSync                    歌单/脚本/设置持久化 + iCloud 同步
 ├── DownloadStore / AudioMetadataWriter   下载管理 + 元数据嵌入
-├── Lyrics / MvResolver / SongRecognizer  歌词 / MV / 听歌识曲
+├── Lyrics / MvResolver                    歌词 / MV
 └── Resources/user-api-preload.js         lx 协议预加载脚本（不可删改）
 docs/          功能规格与截图
 ```
@@ -178,6 +178,81 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 ```
 
 > 提示：改过签名设置后 `project.pbxproj` 会带上你自己的 Team ID 和 Bundle ID。如果打算提 PR，记得把这些本地改动排除掉，别混进提交里。
+
+---
+
+## 🔀 与原仓库差异
+
+本项目由原仓库 **[1970905901/walkman](https://github.com/1970905901/walkman)**（随便听 · 三端播放器）fork 而来，在保留其 **lx-music v4 自定义源协议、四平台直连、8 级音质、下载/本地导入、播放内核** 等核心能力的基础上，针对 **iPhone 单端体验** 做了大量定制与精简。以下是全部差异，按类别列出并注明目的与影响。
+
+### 品牌与标识
+
+| 项 | 原仓库（walkman） | 本项目（shuhao music） | 目的 / 影响 |
+|---|---|---|---|
+| 应用名称 | 随便听 | **shuhao music** | 品牌独立 |
+| 应用图标 | 紫粉渐变双音符（PDF 抽帧） | **白底粉色音符**（用户提供原图） | 按用户设计稿定制 |
+| Bundle ID | `com.heartbeat.walkman` | **`shuhao.com`** | 独立应用身份,避免与原仓库签名冲突 |
+| App Group | `group.com.heartbeat.walkman` | `group.shuhao.com` | 随 Bundle ID 同步 |
+| 版本号 | — | **2.0**（build 26） | 里程碑版本 |
+
+### 平台与工程配置
+
+| 项 | 原仓库（walkman） | 本项目（shuhao music） | 目的 / 影响 |
+|---|---|---|---|
+| 支持设备 | iPhone + iPad + Mac（三端） | **仅 iPhone**（`TARGETED_DEVICE_FAMILY = 1`） | 聚焦手机端体验,删掉 iPad/Mac 布局、状态栏、Dock 菜单、DMG 分发 |
+| Widget 扩展 | WalkmanWidget 桌面小组件 | **已移除** | 无 Widget target,`SharedPlaybackState` 仅保留最近播放记录写入 |
+| 部署目标 | — | **iOS 16.0**（最低适配） | 兼容 iOS 16~18 全系 |
+| 工程结构 | `walkman/` + `iPad/` + `Mac/` + `WalkmanWidget/` | **单 `shuhao/` 目录** | 精简为纯 iOS 工程 |
+| CI | unsigned IPA + macOS DMG | **仅 unsigned IPA** | 移除 Mac 构建 |
+
+### 功能新增
+
+| 功能 | 说明 | 目的 / 影响 |
+|---|---|---|
+| **网易云黑胶唱片播放页** | 封面改为黑胶唱片样式（黑色碟身 + 同心纹 + 中心圆形封面）,播放时 CALayer GPU 驱动匀速旋转,暂停冻结当前角度 | 替代原"矩形封面 + 音浪"方案,视觉更接近主流音乐 App;旋转完全走 UIKit 图层,主线程零开销 |
+| **在线歌单全量导入增强** | 保留原仓库的两步接口 + 分批写入 | 与上游一致,千首大歌单不卡顿 |
+
+### 行为变更
+
+| 项 | 原仓库（walkman） | 本项目（shuhao music） | 目的 / 影响 |
+|---|---|---|---|
+| 播放地址解析 | 脚本失败 → **内置直连兜底**（kw/wy 平台直连） | **纯脚本模式**：脚本失败直接报错,不再静默回落 | 用户明确要求删除内置直连（非官方通道）;解析结果更透明 |
+| 听歌识曲 | 搜索栏 ShazamKit 按钮 + 识别页 | **已整体移除**（含 `SongRecognizer`/`RecognizeView`/麦克风权限） | 用户明确要求删除;移除 `NSMicrophoneUsageDescription`,不再申请麦克风权限 |
+| 播放音浪（AudioWave） | 播放页实时音浪 | **已整体移除**（含 `AudioLevel` 单例、RMS 计算、displayLink） | 用户明确要求删除;移除 60Hz 电平刷新,播放更省电 |
+| 锁屏/车机歌词 | 设置项"用专辑栏显示歌词",锁屏专辑栏随进度显示歌词 | **已整体移除**（含设置开关、`nowPlayingAlbumText`、歌词同步 watcher） | 用户明确要求删除;锁屏专辑栏恢复显示专辑名 |
+| 迷你播放器与 Tab 间距 | 距离较大 | **精确 2mm**（12.8pt）,并修复测量死区 | 用户要求;悬浮条紧贴 Tab 栏上方 |
+| 播放器进出场动画 | 弹簧 + 跟手位移 | **easeOut + 纯 transform**（无中间态） | 整屏重视图上弹簧逐帧插值易卡;easeOut 平滑干脆 |
+| 打开播放器 | 强制深色 scheme（污染整窗） | **移除强制深色**,显式深色背景 | 修复"打开播放器整窗变黑、底部 tab 变透明" |
+| 设置页 | 内嵌在"我的"页 | **独立底部 Tab**（第 5 个） | 设置入口更直接 |
+
+### 配置调整
+
+| 项 | 原仓库（walkman） | 本项目（shuhao music） | 目的 / 影响 |
+|---|---|---|---|
+| AppIcon 资源 | 三槽同图（light/dark/tinted 彩色） | **单 universal 1024 槽**（用户提供的单色图） | 规避 iOS 17+ 对 tinted 槽彩色图的校验,防止回退系统占位图标 |
+| `NSMicrophoneUsageDescription` | 存在 | **已删除** | 听歌识曲移除后不再需要 |
+| `NSUserActivityTypes` 的 `INPlayMediaIntent` | 存在（SiriKit 播放意图） | **已删除** | `SiriPlayMediaHandler` 随 AppDelegate 移除,老式 INPlayMediaIntent 不再注册 |
+| 音频会话 | 播放 + EQ | 播放 + EQ（RMS/音浪相关移除） | 同上 |
+
+### 性能与稳定性优化
+
+| 项 | 说明 | 目的 / 影响 |
+|---|---|---|
+| **4Hz 观察摘除** | 摘除 8+ 个视图对 `PlaybackEngine` 的直接观察,改走 `AppServices.shared` 取指令 + `NowPlayingBar` 低频镜像 | 播放中视图不再随 `currentTime` 每秒重建 4 次,掉帧大幅减少 |
+| **黑胶旋转 GPU 化** | `TimelineView` 30fps SwiftUI 重绘 → CALayer `CABasicAnimation` | 主线程零开销,进出场动画不再被拖累 |
+| **锁屏信息节流** | `MPNowPlayingInfoCenter` 写入 4Hz → 1Hz（歌词行切换时强制刷） | 跨进程 XPC 写入从 4Hz 降到 1Hz,播放中开合动画不卡 |
+| **进度发布 2Hz** | `periodicTimeObserver` 0.25s → 0.5s | 进度条/歌词每秒重建减半 |
+| **黑胶旋转状态** | 不再掺 `isBuffering`（缓冲抖动会反复启停 CAAnimation） | 网络缓冲抖动时黑胶保持旋转,不闪停 |
+| **设置页 Form → List** | 设置页原用 `Form`（唯一一页） | `Form + scrollContentBackground(.hidden) + 全屏渐变` 在 iOS 16 滚动掉帧,改 `List` 后与其它 tab 一致 |
+| **transition 去 scale** | 封面切换 `.scale(0.96)` 过渡 | 暂停/播放时 body 重建会重放 scale 过渡 → 黑胶"循环变大变小",改纯淡入淡出 |
+| **死代码清理** | 清理 `ContentView`、`SiriPlayMediaHandler`、`GridCard`、`ShadowSpec`、未用方法等 | 纯减法,功能不变,包体更小 |
+| **常驻观察者 deinit** | `PlaybackEngine` 无 deinit | 补充 deinit 摘除 3 个常驻 NotificationCenter 观察者,消除 token 悬挂 |
+
+### 已知遗留差异（未做改动）
+
+- **Siri / App Shortcuts**：保留（`AppShortcutsProvider` 驱动的 4 个快捷指令 + 点歌意图仍可用;老式 `INPlayMediaIntent` 已随 SiriPlayMediaHandler 移除）。
+- **iCloud 同步**：保留（歌单/脚本/设置 KVS 同步）。
+- **搜索栏听歌识曲入口**：入口已删,但 `SongRecognizer.swift`/`RecognizeView.swift` 已随删除操作一并移除（无残留）。
 
 ---
 
