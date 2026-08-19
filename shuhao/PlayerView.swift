@@ -122,7 +122,10 @@ struct PlayerView: View {
                     if swipeBackOffset > 100 || v.predictedEndTranslation.width > 200 {
                         onClose()
                     } else {
-                        withAnimation(DS.Motion.standard) { swipeBackOffset = 0 }
+                        // 未越阈值时回弹:用确定的 easeOut 而不是 DS.Motion.standard(弹簧),
+                        // 保证在小位移(几像素到几十像素)时也能在一拍内干脆归零,
+                        // 不被"卡在小偏移"误认为没关闭。
+                        withAnimation(.easeOut(duration: 0.22)) { swipeBackOffset = 0 }
                     }
                 }
         )

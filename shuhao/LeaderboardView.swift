@@ -87,8 +87,10 @@ private struct BoardThumbnail: View {
     }
 }
 
-/// Single leaderboard card. Glass surface + cover-tinted shadow so each
+/// Single leaderboard card. Solid surface + cover-tinted shadow so each
 /// board has a slight color signature pulled from its source tint.
+/// ⚠️ 不要再换回 .ultraThinMaterial —— 列表里每张卡实时背景模糊是滚动掉帧的
+/// 主要来源,见下方 background 注释。
 private struct BoardRow: View {
     let board: BoardInfo
     var body: some View {
@@ -113,7 +115,11 @@ private struct BoardRow: View {
                 .foregroundStyle(DS.Palette.textTertiary)
         }
         .padding(DS.Spacing.m)
-        .background(DS.Glass.thin, in: RoundedRectangle(cornerRadius: DS.Radius.large, style: .continuous))
+        // 性能:列表里每张卡片都开 `.ultraThinMaterial` 实时背景模糊,滚动时大量毛玻璃
+        // 层叠加是 SwiftUI 经典的掉帧源。改成实色(跟 LibraryShortcutCard 一致),
+        // 视觉差异在 opaque 背景上几乎看不出来,滚动流畅度立竿见影。
+        .background(Color(.secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: DS.Radius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.large, style: .continuous)
                 .strokeBorder(DS.Palette.strokeSubtle, lineWidth: 0.5)
