@@ -193,7 +193,7 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | 应用图标 | 紫粉渐变双音符（PDF 抽帧） | **白底粉色音符**（用户提供原图） | 按用户设计稿定制 |
 | Bundle ID | `com.heartbeat.walkman` | **`shuhao.com`** | 独立应用身份,避免与原仓库签名冲突 |
 | App Group | `group.com.heartbeat.walkman` | `group.shuhao.com` | 随 Bundle ID 同步 |
-| 版本号 | — | **2.0**（build 30） | 里程碑版本 |
+| 版本号 | — | **2.0**（build 31） | 里程碑版本 |
 
 ### 平台与工程配置
 
@@ -247,6 +247,9 @@ xcodebuild -project shuhao.xcodeproj -scheme shuhao \
 | **coverPage 布局稳定化** | 封面容器改 ZStack 固定居中,去掉 Spacer 弹性布局与 scale 过渡 | body 重建（暂停/播放）时黑胶位置/尺寸纹丝不动 |
 | **迷你播放器测量系统化** | 高度改系统 API 计算（49pt + 安全区）,不再 findTabBar 递归遍历 | 各 iOS 版本/机型都精确,不再因层级变化导致间距失效 |
 | **启动图标一致性** | LaunchScreen 改纯色背景;SplashView logo 读当前 icon-1024.png | 修复启动时闪现旧版图标;启动页与主屏图标严格一致 |
+| **播放状态持久化后台化** | `persistState` 的 JSON 编码 + 原子写盘从主线程移到后台 utility 队列 | 播放中每 0.5s 的磁盘 I/O 不再阻塞主线程(消除"播放中卡顿"的主线程源) |
+| **歌词缓存设上限** | `LyricsFetcher` 缓存加 500 首上限,超限清最旧一半 | 长时间听歌内存不无界增长,长期运行稳定 |
+| **歌词行 Equatable** | `LyricRow` 实现 `Equatable`,2Hz 更新时 SwiftUI 只重建当前行 | 长歌词滚动不掉帧(整表 diff → 单行 diff) |
 | **死代码清理** | 清理 `ContentView`、`SiriPlayMediaHandler`、`GridCard`、`ShadowSpec`、未用方法等 | 纯减法,功能不变,包体更小 |
 | **常驻观察者 deinit** | `PlaybackEngine` 无 deinit | 补充 deinit 摘除 3 个常驻 NotificationCenter 观察者,消除 token 悬挂 |
 
