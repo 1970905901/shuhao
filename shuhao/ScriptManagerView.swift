@@ -162,7 +162,13 @@ struct ScriptManagerView: View {
             .fullScreenCover(isPresented: $showFileImporter) {
                 ScriptFilePicker { result in
                     showFileImporter = false
-                    loadPickedFile(result)
+                    // ScriptFilePicker 回的是单个 URL,loadPickedFile 吃数组,套一层。
+                    switch result {
+                    case .success(let url):
+                        loadPickedFile(.success([url]))
+                    case .failure(let error):
+                        loadPickedFile(.failure(error))
+                    }
                 }
                 .ignoresSafeArea()
             }
