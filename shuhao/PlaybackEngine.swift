@@ -754,23 +754,32 @@ final class PlaybackEngine: ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
+    /// 上一条写进锁屏专辑栏的歌词行。歌词行切换时强制立即刷新 ——
+    /// 否则 1s 节流会吞掉行切换,锁屏歌词要么延迟要么不更新。
+    private var lastNowPlayingLyric: String?
+
     private func updateNowPlayingTime(force: Bool = false) {
-        // ⚠️ 节流:这个方法被 periodicTimeObserver 每 0.25s 调用一次,而
+        // ⚠️ 节流:这个方法被 periodicTimeObserver 每 0.5s 调用一次,而
         // MPNowPlayingInfoCenter.default().nowPlayingInfo 写入是跨进程 XPC
         // (主线程 → mediaserverd),播放中持续 4Hz 调用是打开/关闭播放器动画
         // 卡顿的元凶之一(播放时有、暂停时无,正好吻合"播放时卡、不播放时正常")。
-        // 锁屏/控制中心的秒针按 1s 粒度即可;用户主动操作(暂停/恢复/拖动)传 force。
+        // 锁屏/控制中心的秒针按 1s 粒度即可;用户主动操作(暂停/恢复/拖动)传 force;
+        // 歌词行切换时(lastNowPlayingLyric 变化)也传 force,保证锁屏歌词跟唱。
+        let lyric = nowPlayingAlbumText()
+        let lyricChanged = lyric != lastNowPlayingLyric
         if !force {
             let now = Date()
-            if now.timeIntervalSince(lastNowPlayingUpdate) < 1.0 { return }
+            let throttled = now.timeIntervalSince(lastNowPlayingUpdate) < 1.0
+            if throttled && !lyricChanged { return }
             lastNowPlayingUpdate = now
         }
+        lastNowPlayingLyric = lyric
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
         info[MPMediaItemPropertyPlaybackDuration] = duration
         // Advance the lyric line shown in the album field as playback progresses.
-        if let album = nowPlayingAlbumText() { info[MPMediaItemPropertyAlbumTitle] = album }
+        if let album = lyric { info[MPMediaItemPropertyAlbumTitle] = album }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 

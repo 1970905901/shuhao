@@ -11,11 +11,13 @@ enum MiniPlayerMetrics {
     ///
     /// 这是**设计值**,不是设备参数 —— 嫌宽窄改这一个数就行,所有机型跟着变。
     /// (之前硬编码 bottomGap = 52 时,实际视觉间距差不多就是这个数;
-    ///  一度设成 10 偏松,回调到 6;实测仍觉得离 tabbar 略远,再收到 2。)
-    static let desiredGap: CGFloat = 2
+    ///  一度设成 10 偏松,回调到 6,再收到 2;用户要求"再近一点",收到 0 ——
+    ///  悬浮条直接贴着 tabbar 上缘,中间只留系统安全区的视觉呼吸。)
+    static let desiredGap: CGFloat = 0
     /// 量不到真实 tabbar 时的兜底垫高。现在走 `.overlay(alignment: .bottom)`,
     /// 所以兜底是"tabbar 顶边距屏幕底 + desiredGap"的 iPhone 15 Pro 实测值。
-    static let fallbackBottomGap: CGFloat = 85
+    /// (tabbar 顶边距屏底实测约 83pt,desiredGap=0 后兜底从 85 收到 83。)
+    static let fallbackBottomGap: CGFloat = 83
     /// 列表最后一行与悬浮条之间的呼吸空间。
     /// 刻意不复用 desiredGap —— 那个是"悬浮条和 tabbar 的缝",两码事,
     /// 共用会导致调间距时把列表留白也一起改了。
