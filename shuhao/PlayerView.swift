@@ -337,83 +337,73 @@ struct PlayerView: View {
     // MARK: - Cover page
 
     private var coverPage: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            // Album art + title/subtitle wrapped in one id'd container so SwiftUI
-            // crossfades the whole "track identity" block when the song changes,
-            // instead of hard-cutting on each property update.
-            ZStack {
-                if let track = now.track {
-                    VStack(spacing: 0) {
-                        // 网易云黑胶唱片样式:整张唱片(碟身 + 中心封面)播放时匀速
-                        // 旋转,暂停/缓冲时冻结在当前角度。
-                        VinylRecord(
-                            coverURL: downloads.displayCoverURL(for: track),
-                            // ⚠️ 只由 isPlaying 驱动,不掺 isBuffering:periodicTimeObserver
-                            // 每 0.5s 赋值一次 isBuffering,网络缓冲抖动时 true↔false 反复,
-                            // 导致 setSpinning 反复移除/重挂 CAAnimation —— 播放中打开播放器
-                            // 动画卡顿的直接元凶之一。缓冲时保持旋转(网易云同款行为)。
-                            spinning: now.isPlaying,
-                            fallback: artwork.primary
-                        )
-                        .frame(width: 320, height: 320)
-                        // ⚠️ 布局优先级:coverPage 是 VStack{Spacer; 内容; Spacer} 结构,
-                        // 暂停/播放时 isPlaying 变化触发 body 重建,若无 layoutPriority,
-                        // Spacer 可能挤压黑胶,造成"黑胶变小/变大"的视觉抖动。
-                        .layoutPriority(1)
-                        .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
+        // ⚠️ 用 ZStack 撑满 + 垂直居中,不用 VStack{Spacer;内容;Spacer} 弹性布局:
+        // 暂停/播放时 now.isPlaying 变化触发 PlayerView body 重建,弹性 Spacer
+        // 会重新分配上下空间,黑胶位置/观感抖动(用户看到的"黑胶变小变大循环")。
+        // ZStack + .frame(maxHeight:.infinity) 让内容永远居中,body 重建时纹丝不动。
+        ZStack {
+            if let track = now.track {
+                VStack(spacing: 0) {
+                    // 网易云黑胶唱片样式:整张唱片(碟身 + 中心封面)播放时匀速
+                    // 旋转,暂停/缓冲时冻结在当前角度。
+                    VinylRecord(
+                        coverURL: downloads.displayCoverURL(for: track),
+                        // ⚠️ 只由 isPlaying 驱动,不掺 isBuffering:periodicTimeObserver
+                        // 每 0.5s 赋值一次 isBuffering,网络缓冲抖动时 true↔false 反复,
+                        // 导致 setSpinning 反复移除/重挂 CAAnimation —— 播放中打开播放器
+                        // 动画卡顿的直接元凶之一。缓冲时保持旋转(网易云同款行为)。
+                        spinning: now.isPlaying,
+                        fallback: artwork.primary
+                    )
+                    .frame(width: 320, height: 320)
+                    .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
 
-                        VStack(spacing: 6) {
-                            Text(track.name)
-                                .font(DS.Typo.title)
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                            Text(track.subtitle)
-                                .font(DS.Typo.body)
-                                .foregroundColor(.white.opacity(0.72))
-                                .lineLimit(1)
-                            // 角标(按实测校正后的档位)+ 文件头实测规格 — 角标在前。
-                            // 背景是封面动态色,用白描边白字而非 QualityBadge 的彩色 tint,
-                            // 避免和大色块对比度不够。任一存在就显示这一行。
-                            if engine?.displayQuality != nil || now.currentAudioSpec != nil {
-                                HStack(spacing: 6) {
-                                    if let q = engine?.displayQuality {
-                                        Text(QualityBadgeStyle(quality: q).label)
-                                            .font(.system(size: 10, weight: .heavy, design: .rounded))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 5).padding(.vertical, 1.5)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                                    .stroke(Color.white.opacity(0.75), lineWidth: 1)
-                                            )
-                                    }
-                                    if let spec = now.currentAudioSpec {
-                                        Text(spec.displayText)
-                                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                            .foregroundColor(.white.opacity(0.5))
-                                            .monospacedDigit()
-                                    }
+                    VStack(spacing: 6) {
+                        Text(track.name)
+                            .font(DS.Typo.title)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        Text(track.subtitle)
+                            .font(DS.Typo.body)
+                            .foregroundColor(.white.opacity(0.72))
+                            .lineLimit(1)
+                        // 角标(按实测校正后的档位)+ 文件头实测规格 — 角标在前。
+                        // 背景是封面动态色,用白描边白字而非 QualityBadge 的彩色 tint,
+                        // 避免和大色块对比度不够。任一存在就显示这一行。
+                        if engine?.displayQuality != nil || now.currentAudioSpec != nil {
+                            HStack(spacing: 6) {
+                                if let q = engine?.displayQuality {
+                                    Text(QualityBadgeStyle(quality: q).label)
+                                        .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 5).padding(.vertical, 1.5)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                                .stroke(Color.white.opacity(0.75), lineWidth: 1)
+                                        )
                                 }
-                                .transition(.opacity)
+                                if let spec = now.currentAudioSpec {
+                                    Text(spec.displayText)
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.5))
+                                        .monospacedDigit()
+                                }
                             }
+                            .transition(.opacity)
                         }
-                        .padding(.top, DS.Spacing.xl)
-                        .animation(DS.Motion.standard, value: now.currentAudioSpec)
-                        .animation(DS.Motion.standard, value: engine?.displayQuality)
                     }
-                    .id(track.id)
-                    // ⚠️ 只做淡入淡出,不做 scale:transition 的 .scale(0.96) 在
-                    // body 重建(暂停/播放时 isPlaying 变化触发)时可能被重放,
-                    // 黑胶从 96% 缩放着放大 → 用户看到的"黑胶变小变大循环"。
-                    .transition(.opacity)
+                    .padding(.top, DS.Spacing.xl)
+                    .animation(DS.Motion.standard, value: now.currentAudioSpec)
+                    .animation(DS.Motion.standard, value: engine?.displayQuality)
                 }
+                .id(track.id)
+                // ⚠️ 只做淡入淡出,不做 scale:transition 的 .scale(0.96) 在
+                // body 重建(暂停/播放时 isPlaying 变化触发)时可能被重放,
+                // 黑胶从 96% 缩放着放大 → 用户看到的"黑胶变小变大循环"。
+                .transition(.opacity)
             }
-            // ⚠️ 不在 ZStack 上挂 .animation(value:):body 重建时的布局变化会被
-            // 这个动画捕获,把 Spacer 挤压/恢复也动画化,加剧黑胶抖动。换歌的
-            // 淡入淡出由上面的 .transition(.opacity) + .id(track.id) 自己驱动。
-
-            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .offset(y: -18)
     }
 
