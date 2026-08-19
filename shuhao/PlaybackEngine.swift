@@ -103,10 +103,6 @@ final class PlaybackEngine: ObservableObject {
     /// 标签栏配件位那个宿主不跑 .task,也收不到别的 ObservableObject 的更新,
     /// 只有挂在它已经在观察的 playback 上才保证刷新;顺带也省一次重复下载。
     @Published private(set) var nowPlayingCover: UIImage?
-    /// Timed lyric lines for the current track. Used to show the current line in the now-playing
-    /// album field (CarPlay/lock-screen) instead of the album name, synced to playback position.
-    private var currentLyrics: [LyricLine] = []
-    private var lyricsResolver: ((Track) async -> [LyricLine])?
     /// Per-track cap on quality. When AVPlayer rejects a high-bitrate file (e.g. Kugou's
     /// 24-bit FLAC that AVFoundation can't decode), we cascade down: flac24bit → flac → 320k → 128k.
     /// `nil` means "respect the user's preferred quality" — set when a new track starts.
@@ -151,10 +147,6 @@ final class PlaybackEngine: ObservableObject {
 
     func setURLResolver(_ resolver: @escaping (Track) async throws -> ResolvedTrack) {
         self.resolveURLHandler = resolver
-    }
-
-    func setLyricsResolver(_ resolver: @escaping (Track) async -> [LyricLine]) {
-        self.lyricsResolver = resolver
     }
 
     /// Wire up the equalizer. Called once on launch by shuhaoApp.
@@ -508,7 +500,6 @@ final class PlaybackEngine: ObservableObject {
         isBuffering = true
         updateNowPlayingInfo()
         loadArtwork()
-        loadLyricsForNowPlaying()
         persistState(force: true)
     }
 
@@ -554,8 +545,7 @@ final class PlaybackEngine: ObservableObject {
             startHiResProgressTimer()
             updateNowPlayingInfo()
             loadArtwork()
-            loadLyricsForNowPlaying()
-        } catch {
+            } catch {
             print("[PlaybackEngine] libFLAC decode failed: \(error)")
             usingHiRes = false
             // Fall back to the quality cascade — but only for script sources. A direct/local URL
@@ -732,7 +722,6 @@ final class PlaybackEngine: ObservableObject {
         currentTime = 0
         duration = 0
         isPlaying = false
-        currentLyrics = []
         needsLoad = false
         pendingRestorePosition = nil
         lastRecordedTrackID = nil
@@ -745,8 +734,7 @@ final class PlaybackEngine: ObservableObject {
         var info: [String: Any] = [:]
         info[MPMediaItemPropertyTitle] = track.name
         info[MPMediaItemPropertyArtist] = track.singer
-        // The album field doubles as a synced-lyric line on CarPlay/lock screen when enabled.
-        if let album = nowPlayingAlbumText() { info[MPMediaItemPropertyAlbumTitle] = album }
+        if let album = currentTrack?.albumName { info[MPMediaItemPropertyAlbumTitle] = album }
         info[MPMediaItemPropertyPlaybackDuration] = duration
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
@@ -754,32 +742,22 @@ final class PlaybackEngine: ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
-    /// 上一条写进锁屏专辑栏的歌词行。歌词行切换时强制立即刷新 ——
-    /// 否则 1s 节流会吞掉行切换,锁屏歌词要么延迟要么不更新。
-    private var lastNowPlayingLyric: String?
-
     private func updateNowPlayingTime(force: Bool = false) {
         // ⚠️ 节流:这个方法被 periodicTimeObserver 每 0.5s 调用一次,而
         // MPNowPlayingInfoCenter.default().nowPlayingInfo 写入是跨进程 XPC
         // (主线程 → mediaserverd),播放中持续 4Hz 调用是打开/关闭播放器动画
         // 卡顿的元凶之一(播放时有、暂停时无,正好吻合"播放时卡、不播放时正常")。
-        // 锁屏/控制中心的秒针按 1s 粒度即可;用户主动操作(暂停/恢复/拖动)传 force;
-        // 歌词行切换时(lastNowPlayingLyric 变化)也传 force,保证锁屏歌词跟唱。
-        let lyric = nowPlayingAlbumText()
-        let lyricChanged = lyric != lastNowPlayingLyric
+        // 锁屏/控制中心的秒针按 1s 粒度即可;用户主动操作(暂停/恢复/拖动)传 force。
         if !force {
             let now = Date()
-            let throttled = now.timeIntervalSince(lastNowPlayingUpdate) < 1.0
-            if throttled && !lyricChanged { return }
+            if now.timeIntervalSince(lastNowPlayingUpdate) < 1.0 { return }
             lastNowPlayingUpdate = now
         }
-        lastNowPlayingLyric = lyric
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
         info[MPMediaItemPropertyPlaybackDuration] = duration
-        // Advance the lyric line shown in the album field as playback progresses.
-        if let album = lyric { info[MPMediaItemPropertyAlbumTitle] = album }
+        if let album = currentTrack?.albumName { info[MPMediaItemPropertyAlbumTitle] = album }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
@@ -800,52 +778,6 @@ final class PlaybackEngine: ObservableObject {
                 self?.currentArtwork = MPMediaItemArtwork(boundsSize: img.size) { _ in img }
                 self?.nowPlayingCover = img
                 self?.updateNowPlayingInfo()
-            }
-        }
-    }
-
-    /// Whether the now-playing album field should show synced lyrics instead of the album name. Defaults on.
-    private var lyricsOnNowPlaying: Bool {
-        UserDefaults.standard.object(forKey: "pref.showLyricsOnNowPlaying") == nil
-            ? true
-            : UserDefaults.standard.bool(forKey: "pref.showLyricsOnNowPlaying")
-    }
-
-    /// Text for the now-playing album field: the active lyric line when enabled + available,
-    /// otherwise the real album name.
-    private func nowPlayingAlbumText() -> String? {
-        if lyricsOnNowPlaying, !currentLyrics.isEmpty,
-           let idx = LRCParser.activeIndex(at: currentTime + LyricSync.leadSeconds, in: currentLyrics) {
-            let line = currentLyrics[idx].text.trimmingCharacters(in: .whitespaces)
-            if !line.isEmpty { return line }
-        }
-        return currentTrack?.albumName
-    }
-
-    /// Current playing lyric line. Public so `LiveActivityController` can push
-    /// it through to the Live Activity / Dynamic Island as the song progresses.
-    /// Returns nil when there are no lyrics, the song is between lines, or the
-    /// line is empty (LRC "♪" placeholders are skipped).
-    func currentLyricLine() -> String? {
-        guard !currentLyrics.isEmpty,
-              let idx = LRCParser.activeIndex(at: currentTime + LyricSync.leadSeconds, in: currentLyrics) else {
-            return nil
-        }
-        let line = currentLyrics[idx].text.trimmingCharacters(in: .whitespaces)
-        return line.isEmpty ? nil : line
-    }
-
-    private func loadLyricsForNowPlaying() {
-        currentLyrics = []
-        guard let track = currentTrack, let resolver = lyricsResolver else { return }
-        let trackID = track.id
-        Task { [weak self] in
-            let lines = await resolver(track)
-            await MainActor.run { [weak self] in
-                guard let self, self.currentTrack?.id == trackID else { return }
-                // Only timestamped lines can be synced to the playback position.
-                self.currentLyrics = lines.filter { $0.time >= 0 }
-                self.updateNowPlayingInfo()
             }
         }
     }
@@ -896,7 +828,6 @@ final class PlaybackEngine: ObservableObject {
         // Show the restored track on the lock screen / CarPlay even before playback starts.
         updateNowPlayingInfo()
         loadArtwork()
-        loadLyricsForNowPlaying()
     }
 
     /// Cascade: master → … → flac24bit → flac → 320k → 128k. Returns the next quality

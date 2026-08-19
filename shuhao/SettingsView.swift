@@ -8,14 +8,17 @@ struct SettingsView: View {
     @State private var cacheSize = 0
 
     var body: some View {
-        Form {
+        // ⚠️ 用 List 而不是 Form:设置页是唯一用 Form 的页面,而
+        // Form + .scrollContentBackground(.hidden) + 全屏渐变背景在 iOS 16 上
+        // 滚动掉帧(其它 tab 都是 List,同样背景组合不掉帧)。List 的分组样式
+        // 和 Form 几乎一致,Picker/Stepper/Toggle 在 List 里同样工作。
+        List {
             Section {
                 Picker("默认音质", selection: $settings.preferredQuality) {
                     ForEach(Quality.allCases, id: \.self) { q in
                         Label(q.displayName, systemImage: iconForQuality(q)).tag(q)
                     }
                 }
-                Toggle("车机/锁屏用专辑栏显示歌词", isOn: $settings.showLyricsOnNowPlaying)
                 NavigationLink {
                     EQView()
                 } label: {
@@ -24,7 +27,7 @@ struct SettingsView: View {
             } header: {
                 Text("播放")
             } footer: {
-                Text("脚本会按此优先级请求音源 URL,若该音质不可用,会自动降级。开启「用专辑栏显示歌词」后,CarPlay 和锁屏原本显示专辑名的位置,会随播放进度显示当前歌词(参考 QQ / 网易云);无歌词时仍显示专辑名")
+                Text("脚本会按此优先级请求音源 URL,若该音质不可用,会自动降级。")
             }
 
             Section {

@@ -77,11 +77,7 @@ final class AppServices {
             let q = await MainActor.run { playback.qualityCap } ?? settings.preferredQuality
             return try await sources.resolveMusicURL(track: track, quality: q)
         }
-        // Synced lyric line shown in the CarPlay/lock-screen album field.
-        playback.setLyricsResolver { [sources] track in
-            await LyricsFetcher.shared.fetch(for: track, sources: sources)
-        }
-        // 已下载的歌:锁屏封面 + 歌词直接读本地(嵌入封面缓存 / 文件内嵌 LRC),离线可用。
+        // 已下载的歌:锁屏封面直接读本地(嵌入封面缓存),离线可用。
         playback.localArtworkProvider = { [downloads] track in
             downloads.embeddedCoverURL(for: track.id)
         }

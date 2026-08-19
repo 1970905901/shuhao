@@ -78,11 +78,6 @@ struct SharedNowPlaying: Codable, Hashable {
     /// `updatedAt` to estimate elapsed time without needing live updates.
     var elapsed: Double
     var duration: Double
-    /// Current lyric line at write-moment. nil = no lyrics for this track, or
-    /// the song is between lines. Updated each time the active line changes
-    /// (RecentTracksRecorder throttles to ~1 Hz to stay within WidgetKit's
-    /// reload budget).
-    var currentLyric: String?
     var updatedAt: Date
 }
 

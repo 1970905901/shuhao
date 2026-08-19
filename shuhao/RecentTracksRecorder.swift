@@ -15,10 +15,6 @@ final class RecentTracksRecorder: ObservableObject {
     private weak var playback: PlaybackEngine?
     private var cancellables = Set<AnyCancellable>()
     private var lastTrackID: String?
-    /// Last lyric we wrote to the shared store — used to dedupe so we only
-    /// re-snapshot when the active line actually changes (avoids redundant
-    /// writes to the App Group container on every 1 Hz tick).
-    private var lastLyric: String?
 
     func bind(to playback: PlaybackEngine) {
         self.playback = playback
@@ -38,24 +34,9 @@ final class RecentTracksRecorder: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.snapshotNowPlaying() }
             .store(in: &cancellables)
-        // Lyric-line watcher: throttle currentTime to ~1 Hz, only re-snapshot
-        // when the active line text actually changes. Keeps the shared store
-        // fresh without writing on every tick.
-        playback.$currentTime
-            .throttle(for: .seconds(1), scheduler: DispatchQueue.main, latest: true)
-            .sink { [weak self] _ in self?.refreshLyricIfChanged() }
-            .store(in: &cancellables)
     }
 
-    private func refreshLyricIfChanged() {
-        guard let playback else { return }
-        let line = playback.currentLyricLine()
-        guard line != lastLyric else { return }
-        lastLyric = line
-        snapshotNowPlaying()
-    }
-
-    /// Writes the current snapshot (title/artist/cover/isPlaying/elapsed/lyric)
+    /// Writes the current snapshot (title/artist/cover/isPlaying/elapsed)
     /// into the App-Group store. Consumers extrapolate `elapsed` from `updatedAt`
     /// so we don't need to write every second.
     private func snapshotNowPlaying() {
@@ -72,7 +53,6 @@ final class RecentTracksRecorder: ObservableObject {
             isPlaying: playback.isPlaying,
             elapsed: playback.currentTime,
             duration: playback.duration,
-            currentLyric: playback.currentLyricLine(),
             updatedAt: Date()
         )
         SharedNowPlayingStore.write(snapshot)
@@ -85,7 +65,6 @@ final class RecentTracksRecorder: ObservableObject {
         }
         guard track.id != lastTrackID else { return }
         lastTrackID = track.id
-        lastLyric = nil  // new song → re-arm the lyric dedupe
 
         let id = track.id
         let title = track.name

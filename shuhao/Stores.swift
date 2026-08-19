@@ -403,10 +403,6 @@ final class SettingsStore: ObservableObject {
     @Published var showDebugNotices: Bool {
         didSet { UserDefaults.standard.set(showDebugNotices, forKey: "pref.showDebugNotices") }
     }
-    /// Show the synced current lyric line in the CarPlay / lock-screen album field instead of the album name.
-    @Published var showLyricsOnNowPlaying: Bool {
-        didSet { UserDefaults.standard.set(showLyricsOnNowPlaying, forKey: "pref.showLyricsOnNowPlaying") }
-    }
     /// Which sources contribute to the iPad/Mac "发现" page's recommendation
     /// + leaderboard feeds. Defaults to all four mainstream sources. Stored
     /// as a comma-joined rawValue list since UserDefaults doesn't carry Set.
@@ -436,11 +432,6 @@ final class SettingsStore: ObservableObject {
         let q = UserDefaults.standard.string(forKey: "pref.quality") ?? Quality.k320.rawValue
         self.preferredQuality = Quality(rawValue: q) ?? .k320
         self.showDebugNotices = UserDefaults.standard.bool(forKey: "pref.showDebugNotices")  // default off
-        if UserDefaults.standard.object(forKey: "pref.showLyricsOnNowPlaying") == nil {
-            self.showLyricsOnNowPlaying = true  // default on
-        } else {
-            self.showLyricsOnNowPlaying = UserDefaults.standard.bool(forKey: "pref.showLyricsOnNowPlaying")
-        }
         // 发现页源:首次启动 4 个主流源全开,后续按用户勾选持久化
         if let raw = UserDefaults.standard.string(forKey: "pref.homeSources") {
             let ids = raw.split(separator: ",").compactMap { SourceID(rawValue: String($0)) }

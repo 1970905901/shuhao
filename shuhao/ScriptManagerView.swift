@@ -1,5 +1,6 @@
 import SwiftUI
-import UniformTypeIdentifiers  // UTType.item — .fileImporter 的类型参数
+import UIKit  // UIDocumentPickerViewController
+import UniformTypeIdentifiers  // UTType
 
 struct ScriptManagerView: View {
     @EnvironmentObject var scripts: ScriptStore
@@ -10,8 +11,8 @@ struct ScriptManagerView: View {
     @State private var pickedFileName: String?
     @State private var isLoading = false
     @State private var error: String?
-    /// 系统文件选择器是否弹出(SwiftUI .fileImporter,iOS 16+ 官方 API)。
-    @State private var showFilePicker = false
+    /// 持有文档选择器的 delegate,防止 present 期间被释放导致回调丢失。
+    @State private var pickerDelegate: ScriptPickerDelegate?
     /// 文件选择完成后的结果弹窗(自动导入,不再要求用户回表单点"导入并加载")。
     @State private var showResultAlert = false
     @State private var resultMessage = ""
@@ -117,20 +118,52 @@ struct ScriptManagerView: View {
             importForm
         }
         #endif
-        // ⚠️ 文件选择器挂在本视图(列表页)根上,而不是 fullScreenCover 内部:
-        // iOS 16/17 上从模态内再弹 UIDocumentPicker/.fileImporter,呈现层级一深
-        // 回调就丢("点文件无反应")。挂在列表页 = 最干净的系统级呈现上下文。
+        // ⚠️ 文件选择器:用原生 UIDocumentPickerViewController + 具体 UTI 类型。
+        // 之前 SwiftUI .fileImporter 用 .item 通配,在 iOS 18 上"能弹出但文件灰显/点选
+        // 无反应"(用户连续反馈)。改用 UIDocumentPickerViewController(forOpeningContentTypes:)
+        // 并列出脚本相关的具体类型(.javaScript/.plainText/.text/.json/.sourceCode),
+        // 文件必可选;呈现走最顶层 VC 原生 present,回调由 delegate 直接持有。
         // 流程:导入表单里点"选择脚本文件"→ 关表单 → 弹选择器 → 选完自动导入。
-        .fileImporter(
-            isPresented: $showFilePicker,
-            allowedContentTypes: [.item],
-            allowsMultipleSelection: false,
-            onCompletion: loadPickedFile
-        )
         .alert("导入结果", isPresented: $showResultAlert) {
             Button("好", role: .cancel) {}
         } message: {
             Text(resultMessage)
+        }
+    }
+
+    /// 从当前窗口最顶层 VC 原生弹出系统文档选择器。
+    private func presentScriptPicker() {
+        // struct 不能 [weak self],直接捕获拷贝即可 —— @State 底层是共享存储,
+        // 回调里通过这份拷贝写状态照样会驱动视图刷新。
+        let delegate = ScriptPickerDelegate { result in
+            self.pickerDelegate = nil
+            self.handlePicked(result)
+        }
+        pickerDelegate = delegate
+
+        guard let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            resultMessage = "无法找到窗口上下文"
+            showResultAlert = true
+            return
+        }
+        var top = root
+        while let presented = top.presentedViewController { top = presented }
+        // 具体 UTI 类型,不是 .item 通配 —— iOS 18 上 .item 会让文件灰显不可选。
+        let types: [UTType] = [.javaScript, .plainText, .text, .json, .sourceCode, .data]
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
+        picker.allowsMultipleSelection = false
+        picker.delegate = delegate
+        top.present(picker, animated: true)
+    }
+
+    /// 选择器回调入口:把单个 URL 包装成 loadPickedFile 需要的数组 Result。
+    private func handlePicked(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            loadPickedFile(.success([url]))
+        case .failure(let error):
+            loadPickedFile(.failure(error))
         }
     }
 
@@ -145,11 +178,11 @@ struct ScriptManagerView: View {
                 if importMode == .file {
                     Section {
                         Button {
-                            // 关掉导入表单,再弹文件选择器 —— 选择器永远从列表页(最干净的
-                            // 呈现上下文)弹出,不经过 fullScreenCover 嵌套。选完自动导入。
+                            // 关掉导入表单,再原生 present 文档选择器 —— 选择器从最干净的
+                            // 呈现上下文弹出,不经过 fullScreenCover 嵌套。选完自动导入。
                             showImport = false
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                showFilePicker = true
+                                presentScriptPicker()
                             }
                         } label: {
                             Label(pickedFileName ?? "选择脚本文件", systemImage: "doc.badge.plus")
@@ -300,5 +333,27 @@ struct ScriptManagerView: View {
                 self.error = error.localizedDescription
             }
         }
+    }
+}
+
+// MARK: - UIKit 文档选择器 delegate
+
+/// 系统文档选择器的回调代理。由 `ScriptManagerView.presentScriptPicker()` 创建并持有
+/// (@State pickerDelegate),选中/取消直接回调,不经过任何 SwiftUI 呈现层 —— 绕开
+/// iOS 16/17/18 上 .fileImporter / 嵌套呈现的"能弹出但点文件无反应"坑。
+final class ScriptPickerDelegate: NSObject, UIDocumentPickerDelegate {
+    private let onPick: (Result<URL, Error>) -> Void
+    init(onPick: @escaping (Result<URL, Error>) -> Void) { self.onPick = onPick }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        if let url = urls.first {
+            onPick(.success(url))
+        } else {
+            onPick(.failure(URLError(.cannotOpenFile)))
+        }
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        onPick(.failure(URLError(.cancelled)))
     }
 }
