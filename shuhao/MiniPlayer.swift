@@ -10,14 +10,15 @@ enum MiniPlayerMetrics {
     /// 悬浮条与 tabbar 之间想要的缝隙。
     ///
     /// 这是**设计值**,不是设备参数 —— 嫌宽窄改这一个数就行,所有机型跟着变。
-    /// (之前硬编码 bottomGap = 52 时,实际视觉间距差不多就是这个数;
-    ///  一度设成 10 偏松,回调到 6,再收到 2;用户要求"再近一点",收到 0 ——
-    ///  悬浮条直接贴着 tabbar 上缘,中间只留系统安全区的视觉呼吸。)
-    static let desiredGap: CGFloat = 0
+    /// 用户要求"精确两毫米":iOS 设计基准 1mm ≈ 6.42pt(1pt = 1/163 inch,
+    /// 1 inch = 25.4mm),2mm ≈ 12.84pt。取 12.8pt。
+    /// (历史:52 → 10 → 6 → 2 → 0 的迭代中,0~2pt 的缝隙肉眼几乎不可见,
+    ///  用户感觉"没生效";12.8pt 是明确可见的 2mm 缝隙。)
+    static let desiredGap: CGFloat = 12.8
     /// 量不到真实 tabbar 时的兜底垫高。现在走 `.overlay(alignment: .bottom)`,
     /// 所以兜底是"tabbar 顶边距屏幕底 + desiredGap"的 iPhone 15 Pro 实测值。
-    /// (tabbar 顶边距屏底实测约 83pt,desiredGap=0 后兜底从 85 收到 83。)
-    static let fallbackBottomGap: CGFloat = 83
+    /// (tabbar 顶边距屏底实测约 83pt + 2mm 缝隙 12.8pt = 95.8pt。)
+    static let fallbackBottomGap: CGFloat = 95.8
     /// 列表最后一行与悬浮条之间的呼吸空间。
     /// 刻意不复用 desiredGap —— 那个是"悬浮条和 tabbar 的缝",两码事,
     /// 共用会导致调间距时把列表留白也一起改了。
@@ -69,7 +70,10 @@ final class TabBarMetrics: ObservableObject {
         // 量到离谱的值宁可用兜底,也不要把悬浮条甩到屏幕中间去。
         // 正常 iPhone 在 50~100pt 之间;超过 150 几乎肯定是临时 frame/错误窗口。
         guard value.isFinite, value > 0, value < 150 else { return retry() }
-        if abs(value - bottomGap) > 0.5 { bottomGap = value }
+        // ⚠️ 不用 >0.5 的死区判断:那个会让"差 0.5pt 以内的修改被吞掉",
+        // 用户改 desiredGap 后感觉"没生效"。@Published 只在值变化时发布,
+        // 直接赋值即可,同值不会触发多余刷新。
+        if value != bottomGap { bottomGap = value }
     }
 
     private func retry() {

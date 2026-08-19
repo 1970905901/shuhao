@@ -98,6 +98,17 @@ final class PlaybackEngine: ObservableObject {
     private var newErrorLogObserver: NSObjectProtocol?
     private var statusObservation: NSKeyValueObservation?
     private var bufferEmptyObservation: NSKeyValueObservation?
+
+    deinit {
+        // 常驻观察者(生命周期 = engine 生命周期)在 deinit 里统一摘除,
+        // 避免持有悬挂的 NotificationCenter token。临时观察者由
+        // cleanupPlayer() 负责(切歌/换链路时反复创建销毁)。
+        if let obs = interruptionObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = foregroundObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = routeChangeObserver { NotificationCenter.default.removeObserver(obs) }
+        hiResProgressTimer?.invalidate()
+    }
+
     private var currentArtwork: MPMediaItemArtwork?
     /// 当前曲目封面。锁屏封面本来就要下载,顺手发布出来给迷你播放器用 ——
     /// 标签栏配件位那个宿主不跑 .task,也收不到别的 ObservableObject 的更新,
