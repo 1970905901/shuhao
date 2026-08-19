@@ -40,9 +40,9 @@ struct PlayerView: View {
 
     /// 进场弹簧(右缘滑入),与 RootTabView.openPlayer 手感一致。
     static let playerSpring = Animation.spring(response: 0.42, dampingFraction: 0.82)
-    /// 关闭弹簧(右缘滑出):比进场更短、阻尼更高,跟随手指滑出一段后收得干脆,
-    /// 不会有拖尾或回弹感。
-    static let playerCloseSpring = Animation.spring(response: 0.34, dampingFraction: 0.88)
+    /// 关闭动画(右缘滑出):用短促的 easeOut 而不是弹簧 —— 弹簧在整屏重视图上
+    /// 每帧非线性插值 + 回弹,松手瞬间尤其容易卡;easeOut 0.25s 干脆平滑无过冲。
+    static let playerCloseSpring = Animation.easeOut(duration: 0.25)
 
     /// Shared selector — see `PlaybackCycleMode` in PlaybackEngine.swift.
     private var cycleMode: PlaybackCycleMode {
@@ -126,16 +126,19 @@ struct PlayerView: View {
                     }
                 }
         )
-        .onAppear {
-            sync()
-        }
-        // isOpen 翻成 false(关闭)时把拖动残余量归零:这样既不影响"从当前拖动位置
-        // 向右滑出"的动画(关闭瞬间 offset 已是屏宽,忽略 swipeBackOffset),又能
-        // 保证随后若快速重开时从干净位置(0)滑入,不会卡在半路。
+        // ⚠️ 这里只在"重开(isOpen 变 true)"时清零 swipeBackOffset —— 千万不能在
+        // 关闭(isOpen 变 false)时清零:关闭动画正从当前拖动位置(swipeBackOffset,
+        // 比如已拖到 150)平滑飞到屏宽,一旦此时清零,动画会从 x=0 起跳 —— 视觉上
+        // 播放器先回弹到最左边再飞出,就是用户看到的"关闭时顿挫/有 bug"。
         .shOnChange(of: isOpen) {
-            if !isOpen { swipeBackOffset = 0 }
+            if isOpen { swipeBackOffset = 0 }
         }
         .shOnChange(of: now.track?.id) { sync() }
+        .onAppear {
+            // 每次挂载(重新打开)都从干净位置开始,避免残留上次关闭时的位移。
+            swipeBackOffset = 0
+            sync()
+        }
         // All sheets below are forced back to the system's real color scheme +
         // re-injected with the brand tint. Both default-inherit through SwiftUI
         // ancestors, but `.preferredColorScheme` re-roots the sheet so we lose
