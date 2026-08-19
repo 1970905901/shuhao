@@ -17,8 +17,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show Xcode / SDKs
+      - name: Select latest Xcode
         run: |
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Selected Xcode: $latest"
+          sudo xcode-select -s "$latest"
           xcodebuild -version
           xcodebuild -showsdks
 
@@ -58,6 +61,13 @@ jobs:
         with:
           name: shuhao-ios-ipa
           path: shuhao-unsigned.ipa
+
+      - name: Upload build log (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-ios
+          path: build.log
 
   release:
     name: Publish release (on tag)
