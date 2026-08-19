@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers  // UTType.item — .fileImporter 的类型参数
 
 struct ScriptManagerView: View {
     @EnvironmentObject var scripts: ScriptStore
