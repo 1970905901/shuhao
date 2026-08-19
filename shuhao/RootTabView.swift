@@ -126,9 +126,21 @@ struct RootTabView: View {
         ZStack(alignment: .bottom) {
             phoneTabs
             overlays
+            // 迷你播放器直接挂在 root ZStack 上(而不是内部 TabView 的 overlay)。
+            // 原因:之前挂在 TabView 的 `.overlay(alignment: .bottom)` 上,而那个
+            // overlay 在 `.frame(maxHeight: .infinity)` 拉伸之前就绑死了,锚点跟着
+            // 某个 tab 的固有高度走 —— 搜索页空态内容不高时,悬浮条被甩到屏幕中间。
+            // root ZStack 显式撑满全屏且对齐底部,ZStack 的 alignment 比"先 overlay
+            // 再 frame 拉伸"可靠得多,锚点确定就是屏幕底。
+            // 它只负责"画",让位(列表底部留白)仍由 phoneTabs 的 .bottomContentMargin 负责。
+            if now.track != nil {
+                MiniPlayer(onTap: openPlayer)
+                    .padding(.horizontal, MiniPlayerMetrics.horizontalInset)
+                    // 垫高由运行时量出来的 tabbar 位置决定,不写死(见 TabBarMetrics)
+                    .padding(.bottom, tabBar.bottomGap)
+            }
         }
-        // 必须显式撑满全屏,否则 .overlay(alignment: .bottom) 的"底部"会跟着
-        // phoneTabs 的固有高度走 —— 搜索页空态内容不高时,悬浮条会被甩到屏幕中间。
+        // 必须显式撑满全屏,否则 ZStack 的"底部"对齐会跟着内容高度走。
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -189,24 +201,18 @@ struct RootTabView: View {
         //                                        识别器 / 把 4Hz 刷新彻底移出 SwiftUI,
         //                                        全都没能修好
         //
-        // 现在用第 4 种(已修正):把迷你播放器作为 `.overlay(alignment: .bottom)` 铺在
-        // TabView 底部,再用 TabBarMetrics 量出来的 tabbar 顶边到屏幕底距离把它抬到
-        // tabbar 上方。原因:`.safeAreaInset` 在带 NavigationStack 的 tab 上行为不一致,
-        // 排行榜/歌单页会把悬浮条甩到屏幕中间,而搜索页正常;overlay 的定位是显式的,
-        // 不再依赖系统对 safeAreaInset 的隐式布局。
+        // 现在用第 4 种的进化版:迷你播放器是 RootTabView 的 root ZStack 的一个
+        // bottom 对齐子视图(见 body),由 TabBarMetrics 量出来的 tabbar 顶边到屏幕底
+        // 距离(`bottomGap`)垫高到 tabbar 上方。之所以不挂在 TabView 的
+        // `.overlay(alignment: .bottom)` 上:那个 overlay 在 `.frame(maxHeight: .infinity)`
+        // 拉伸之前就绑死了锚点,搜索页空态内容不高时会被甩到屏幕中间。
+        // `.safeAreaInset` 同样不行 —— 在带 NavigationStack 的 tab 上行为不一致,
+        // 排行榜/歌单页会把悬浮条甩到屏幕中间。root ZStack 的 alignment 才可靠。
         //
         // 它只负责"画",不负责"让位":列表让位由下面的 .bottomContentMargin 单独负责 ——
         // 那个是走环境传递的,能进到 NavigationStack push 出来的二级页里。
         // 两件事拆开做,别指望一个修饰符全包。
-        .overlay(alignment: .bottom) {
-            // 条件读低频镜像 —— 读 playback 会让整个 phoneTabs 每秒重建 4 次
-            if now.track != nil {
-                MiniPlayer(onTap: openPlayer)
-                    .padding(.horizontal, MiniPlayerMetrics.horizontalInset)
-                    // 垫高由运行时量出来的 tabbar 位置决定,不写死(见 TabBarMetrics)
-                    .padding(.bottom, tabBar.bottomGap)
-            }
-        }
+        // (迷你播放器本身已移到 RootTabView 的 root ZStack 上,见 body。)
         // tabbar 未必在首次布局时就在视图树里,出现和切页时各量一次;
         // 量出来的值没变就不会发通知,不会造成额外重建。
         .onAppear { tabBar.refresh() }
@@ -216,8 +222,7 @@ struct RootTabView: View {
         // NavigationStack push 出来的二级页 —— 这正是 safeAreaInset 到不了的地方。
         // 没歌在放时不留白,免得列表底部凭空多一块空隙。
         .bottomContentMargin(now.track != nil ? MiniPlayerMetrics.scrollBottomMargin : 0)
-        // 显式撑满:root ZStack 已经撑满,这里再显式声明一层,防止 TabView 在某些
-        // 内容较短的 tab(如搜索空态)上收缩,导致 .overlay 底部不是屏幕底。
+        // 显式撑满,防止 TabView 在某些内容较短的 tab(如搜索空态)上收缩。
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -225,8 +230,8 @@ struct RootTabView: View {
 
     @ViewBuilder
     private var overlays: some View {
-        // iPhone 的 MiniPlayer 现在挂在 TabView 的原生配件位上(见 phoneTabs),
-        // 不再是这里的浮层。iPad/Mac 有自己的 IPadBottomBar,同样不走这里。
+        // 迷你播放器现在挂在 RootTabView 的 root ZStack 上(见 body),不再是这里的浮层。
+        // iPad/Mac 有自己的 IPadBottomBar,同样不走这里。
         //
         // 横幅拆成独立子视图:它必须观察 playback(错误/提示都在引擎上),
         // 而 playback 每 0.25 秒发一次进度。放在这里会把整个根视图拖着一起
