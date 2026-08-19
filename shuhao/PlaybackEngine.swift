@@ -13,6 +13,16 @@ private struct PersistedPlaybackState: Codable {
     var shuffle: Bool
 }
 
+/// 实时音浪电平的**独立**可观察对象。刻意不放在 `PlaybackEngine` 上:电平由音频 tap
+/// 经 CADisplayLink 以 ~60Hz 频率更新,若作为 `PlaybackEngine` 的 `@Published`,会每秒触发
+/// 几十次 `objectWillChange`,拖累**所有**观察 `PlaybackEngine` 的视图(典型表现就是播放时
+/// 全 app 掉帧)。拆出来后,只有真正订阅它的波形视图会在 60Hz 刷新,其余视图不受影响。
+@MainActor
+final class AudioLevel: ObservableObject {
+    @Published var value: Float = 0
+    static let shared = AudioLevel()
+}
+
 @MainActor
 final class PlaybackEngine: ObservableObject {
     @Published private(set) var currentTrack: Track?
@@ -79,7 +89,8 @@ final class PlaybackEngine: ObservableObject {
     /// Real-time audio level (0…1, RMS-smoothed) — sourced from the same
     /// MTAudioProcessingTap that runs the equalizer. Drives AudioWave's
     /// reactive amplitude. Published so views update live.
-    @Published private(set) var audioLevel: Float = 0
+    /// 兼容读访问 —— 转发到独立的 AudioLevel 单例,**不再**触发本对象的 objectWillChange。
+    var audioLevel: Float { AudioLevel.shared.value }
     /// Single tap doing both EQ + RMS. Recreated each startPlayback so biquad
     /// state lines resets between songs.
     private var audioTap: EQAudioTap?
@@ -401,7 +412,7 @@ final class PlaybackEngine: ObservableObject {
         tap.install(on: item)
         audioLevelObservation = tap.$level
             .removeDuplicates()
-            .sink { [weak self] level in self?.audioLevel = level }
+            .sink { level in AudioLevel.shared.value = level }
 
         // KVO: AVPlayerItem.status — fires when item loads / fails.
         statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in

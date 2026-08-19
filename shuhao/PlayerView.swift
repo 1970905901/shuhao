@@ -415,8 +415,7 @@ struct PlayerView: View {
             }
             .animation(DS.Motion.standard, value: playback.currentTrack?.id)
 
-            AudioWave(active: playback.isPlaying && !playback.isBuffering,
-                      level: playback.audioLevel)
+            AudioWave(active: playback.isPlaying && !playback.isBuffering)
                 .frame(height: 68)
                 .padding(.horizontal, 4)
                 .padding(.top, DS.Spacing.l)
@@ -570,8 +569,11 @@ struct PlayerView: View {
 struct AudioWave: View {
     var active: Bool
     var color: Color = .white
-    /// 0…1, smoothed RMS from `PlaybackEngine.audioLevel`. 0 means "use synthetic".
-    var level: Float = 0
+    /// 0…1, smoothed RMS。直接从独立的 AudioLevel 单例读取,避免 60Hz 更新波及其父视图
+    /// (之前 audioLevel 挂在 PlaybackEngine 上,每秒几十次触发全 app 重绘、造成掉帧)。
+    /// 0 means "use synthetic"。
+    @ObservedObject private var audioLevel = AudioLevel.shared
+    private var level: Float { audioLevel.value }
 
     // (baseAmp fraction, wavelength, drift speed, pulse speed, pulse phase, max opacity, line width)
     private let waves: [(amp: CGFloat, wl: CGFloat, drift: Double, pulse: Double, pPhase: Double, opacity: Double, width: CGFloat)] = [
